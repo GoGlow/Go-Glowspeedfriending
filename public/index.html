@@ -338,6 +338,8 @@ const DRAFT_KEY  = 'gg_draft_v4';   // local draft of ticked choices, survives o
 const PIN_KEY    = 'gg_pin_unlocked';
 
 // ══ BOOT ══
+  window.GG_SUPABASE_URL = 'https://owxzsfpsqhgheedxkspa.supabase.co';
+   window.GG_ANON_KEY = 'sb_publishable_dkgdc-6H0UMjZspFEhblxA_hrX43UN6';
 addEventListener('DOMContentLoaded', () => {
   cfg = JSON.parse(localStorage.getItem(CFG_KEY) || '{}');
   eventId = localStorage.getItem(EVENT_KEY) || uid();
