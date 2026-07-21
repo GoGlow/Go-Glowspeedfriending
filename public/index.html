@@ -338,8 +338,8 @@ const DRAFT_KEY  = 'gg_draft_v4';   // local draft of ticked choices, survives o
 const PIN_KEY    = 'gg_pin_unlocked';
 
 // ══ BOOT ══
-  window.GG_SUPABASE_URL = 'https://owxzsfpsqhgheedxkspa.supabase.co';
-   window.GG_ANON_KEY = 'sb_publishable_dkgdc-6H0UMjZspFEhblxA_hrX43UN6';
+window.GG_SUPABASE_URL = 'https://owxzsfpsqhgheedxkspa.supabase.co';
+window.GG_ANON_KEY = 'sb_publishable_dkgdc-6H0UMjZspFEhblxA_hrX43UN6';
 addEventListener('DOMContentLoaded', () => {
   cfg = JSON.parse(localStorage.getItem(CFG_KEY) || '{}');
   eventId = localStorage.getItem(EVENT_KEY) || uid();
@@ -666,31 +666,7 @@ async function importEmails() {
   const raw = document.getElementById('import-csv').value.trim();
   if (!raw) { toast('Paste some emails or a CSV first'); return; }
 
-  // Find email addresses anywhere in the pasted text, and grab a plausible
-  // preceding name if there's a comma — works for raw Ticket Tailor exports too
-  const lines = raw.split('\n');
-  const parsed = [];
-  const emailRegex = /[\w.+-]+@[\w-]+\.[\w.-]+/;
-
-  lines.forEach(line => {
-    const match = line.match(emailRegex);
-    if (!match) return;
-    const email = match[0].trim();
-    let name = '';
-    const before = line.slice(0, match.index).replace(/[,;]+\s*$/, '').trim();
-    // Strip common CSV cruft / quotes
-    const cleaned = before.replace(/["']/g, '').split(',').map(s => s.trim()).filter(Boolean);
-    if (cleaned.length) name = cleaned[cleaned.length - 1];
-    parsed.push({ name, email });
-  });
-
-  // De-dupe by email
-  const seen = new Set();
-  const unique = parsed.filter(p => {
-    const k = p.email.toLowerCase();
-    if (seen.has(k)) return false;
-    seen.add(k); return true;
-  });
+  const unique = parseGuestCSV(raw);
 
   if (!unique.length) { toast('No valid emails found in that text'); return; }
 
@@ -709,6 +685,91 @@ async function importEmails() {
   await loadGuests();
   refreshHostDash();
   toast(`${data.imported} guests imported ✓`);
+}
+
+// Proper CSV parser — handles real multi-column exports (Ticket Tailor, Eventbrite, etc.)
+// with quoted fields, and falls back to loose "Name, email" line parsing for manual pastes.
+function parseGuestCSV(raw) {
+  const lines = raw.split(/\r?\n/).filter(l => l.trim().length > 0);
+  if (!lines.length) return [];
+
+  // Parse a single CSV line respecting quoted fields (so commas inside quotes don't split)
+  function parseCSVLine(line) {
+    const fields = [];
+    let cur = '', inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (inQuotes) {
+        if (ch === '"') {
+          if (line[i + 1] === '"') { cur += '"'; i++; }
+          else inQuotes = false;
+        } else cur += ch;
+      } else {
+        if (ch === '"') inQuotes = true;
+        else if (ch === ',') { fields.push(cur); cur = ''; }
+        else cur += ch;
+      }
+    }
+    fields.push(cur);
+    return fields.map(f => f.trim());
+  }
+
+  const emailRegex = /^[\w.+-]+@[\w-]+\.[\w.-]+$/;
+  const headerRow = parseCSVLine(lines[0]);
+  const headerLower = headerRow.map(h => h.toLowerCase().replace(/[^a-z]/g, ''));
+
+  const emailIdx = headerLower.findIndex(h => h.includes('email'));
+  const looksLikeHeader = emailIdx !== -1;
+
+  const guests = [];
+
+  if (looksLikeHeader) {
+    // Structured CSV with a real header row — find the right columns by name
+    const firstNameIdx = headerLower.findIndex(h => h === 'firstname' || h === 'first');
+    const lastNameIdx  = headerLower.findIndex(h => h === 'lastname' || h === 'last' || h === 'surname');
+    const fullNameIdx  = headerLower.findIndex(h =>
+      (h.includes('name') && !h.includes('event') && !h.includes('ticket') && !h.includes('file'))
+      && h !== 'firstname' && h !== 'lastname' && h !== 'first' && h !== 'last' && h !== 'surname'
+    );
+
+    for (let i = 1; i < lines.length; i++) {
+      const row = parseCSVLine(lines[i]);
+      const email = (row[emailIdx] || '').trim().toLowerCase();
+      if (!emailRegex.test(email)) continue;
+
+      let name = '';
+      if (firstNameIdx !== -1 || lastNameIdx !== -1) {
+        name = [row[firstNameIdx] || '', row[lastNameIdx] || ''].join(' ').trim();
+      } else if (fullNameIdx !== -1) {
+        name = (row[fullNameIdx] || '').trim();
+      }
+
+      guests.push({ name, email });
+    }
+  } else {
+    // No structured header — fall back to loose "Name, email" per line, or a bare email list
+    lines.forEach(line => {
+      const looseMatch = line.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
+      if (!looseMatch) return;
+      const email = looseMatch[0].trim().toLowerCase();
+      let name = '';
+      const before = line.slice(0, looseMatch.index).replace(/[,;]+\s*$/, '').trim();
+      const cleaned = before.replace(/["']/g, '').split(',').map(s => s.trim()).filter(Boolean);
+      if (cleaned.length) name = cleaned[cleaned.length - 1];
+      guests.push({ name, email });
+    });
+  }
+
+  // De-dupe by email, and fall back to email prefix only if truly no name was found anywhere
+  const seen = new Set();
+  return guests
+    .filter(g => {
+      const k = g.email.toLowerCase();
+      if (seen.has(k) || !k) return false;
+      seen.add(k);
+      return true;
+    })
+    .map(g => ({ name: g.name || g.email.split('@')[0], email: g.email }));
 }
 
 async function addOneGuest() {
