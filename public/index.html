@@ -673,18 +673,33 @@ async function importEmails() {
   const statusEl = document.getElementById('import-status');
   statusEl.textContent = 'Importing…';
 
-  const res = await fetch('/api/import-emails', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ guests: unique, eventId, pin: storedPin() }),
-  });
+  try {
+    const res = await fetch('/api/import-emails', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ guests: unique, eventId, pin: storedPin() }),
+    });
 
-  const data = await res.json();
-  if (!res.ok) { statusEl.textContent = `Error: ${data.error}`; return; }
-  statusEl.textContent = `✓ ${data.imported} imported`;
-  document.getElementById('import-csv').value = '';
-  await loadGuests();
-  refreshHostDash();
-  toast(`${data.imported} guests imported ✓`);
+    let data;
+    try {
+      data = await res.json();
+    } catch (jsonErr) {
+      statusEl.textContent = `Server returned an unexpected response (status ${res.status}). Check Vercel function logs.`;
+      return;
+    }
+
+    if (!res.ok) {
+      statusEl.textContent = `Error (${res.status}): ${data.error || 'unknown error'}`;
+      return;
+    }
+
+    statusEl.textContent = `✓ ${data.imported} imported`;
+    document.getElementById('import-csv').value = '';
+    await loadGuests();
+    refreshHostDash();
+    toast(`${data.imported} guests imported ✓`);
+  } catch (networkErr) {
+    statusEl.textContent = `Network error: ${networkErr.message}`;
+  }
 }
 
 // Proper CSV parser — handles real multi-column exports (Ticket Tailor, Eventbrite, etc.)
@@ -777,17 +792,33 @@ async function addOneGuest() {
   const email = document.getElementById('m-email').value.trim();
   if (!name || !email) { toast('Enter name and email'); return; }
 
-  const res = await fetch('/api/import-emails', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ guests: [{ name, email }], eventId, pin: storedPin() }),
-  });
-  if (!res.ok) { toast('Error adding guest'); return; }
+  try {
+    const res = await fetch('/api/import-emails', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ guests: [{ name, email }], eventId, pin: storedPin() }),
+    });
 
-  document.getElementById('m-name').value = '';
-  document.getElementById('m-email').value = '';
-  await loadGuests();
-  refreshHostDash();
-  toast(`${name} added ✓`);
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      toast(`Server error (status ${res.status}) — check Vercel logs`);
+      return;
+    }
+
+    if (!res.ok) {
+      toast(`Error: ${data.error || 'unknown error'}`);
+      return;
+    }
+
+    document.getElementById('m-name').value = '';
+    document.getElementById('m-email').value = '';
+    await loadGuests();
+    refreshHostDash();
+    toast(`${name} added ✓`);
+  } catch (networkErr) {
+    toast(`Network error: ${networkErr.message}`);
+  }
 }
 
 // ══ MATCHES ══
