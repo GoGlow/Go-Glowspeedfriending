@@ -253,7 +253,10 @@
       <div class="qr-url" id="qr-url"></div>
     </div>
 
-    <div class="section-head"><div class="section-title">Import guest list</div></div>
+    <div class="section-head">
+      <div class="section-title">Import guest list</div>
+      <button class="btn btn-ghost btn-sm" onclick="clearGuestList()" style="color:var(--pink-deep);border-color:var(--pink-light)">🗑️ Clear guest list</button>
+    </div>
 
     <div class="import-tabs">
       <div class="import-tab active" id="imp-tab-csv" onclick="switchImportTab('csv')">📋 Paste CSV</div>
@@ -845,6 +848,45 @@ async function addOneGuest() {
     await loadGuests();
     refreshHostDash();
     toast(`${name} added ✓`);
+  } catch (networkErr) {
+    toast(`Network error: ${networkErr.message}`);
+  }
+}
+
+async function clearGuestList() {
+  if (!guests.length) { toast('Guest list is already empty'); return; }
+
+  const confirmed = confirm(
+    `Remove all ${guests.length} guest${guests.length !== 1 ? 's' : ''} and any submissions for this event?\n\nThis can't be undone — use this to clear test names before a real event.`
+  );
+  if (!confirmed) return;
+
+  try {
+    const res = await fetch('/api/clear-guests', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventId, pin: storedPin() }),
+    });
+
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      toast(`Server error (status ${res.status}) — check Vercel logs`);
+      return;
+    }
+
+    if (!res.ok) {
+      toast(`Error: ${data.error || 'unknown error'}`);
+      return;
+    }
+
+    matches = [];
+    document.getElementById('email-panel').style.display = 'none';
+    document.getElementById('s-matches').textContent = '—';
+    await loadGuests();
+    await loadSubs();
+    refreshHostDash();
+    toast('Guest list cleared ✓');
   } catch (networkErr) {
     toast(`Network error: ${networkErr.message}`);
   }
