@@ -31,17 +31,21 @@ export default async function handler(req, res) {
     .filter(m => m.aEmail && m.bEmail)
     .map(m => {
       const [first, second] = [
-        { name: m.aName || '', email: m.aEmail, insta: m.aInsta || '' },
-        { name: m.bName || '', email: m.bEmail, insta: m.bInsta || '' },
+        { name: m.aName || '', email: m.aEmail, phone: m.aPhone || '', whatsapp: m.aWhatsapp || '', insta: m.aInsta || '' },
+        { name: m.bName || '', email: m.bEmail, phone: m.bPhone || '', whatsapp: m.bWhatsapp || '', insta: m.bInsta || '' },
       ].sort((x, y) => x.email.localeCompare(y.email));
 
       return {
         event_id: eventId,
         guest_a_name: first.name,
         guest_a_email: first.email.toLowerCase(),
+        guest_a_phone: first.phone,
+        guest_a_whatsapp: first.whatsapp,
         guest_a_insta: first.insta,
         guest_b_name: second.name,
         guest_b_email: second.email.toLowerCase(),
+        guest_b_phone: second.phone,
+        guest_b_whatsapp: second.whatsapp,
         guest_b_insta: second.insta,
       };
     });
