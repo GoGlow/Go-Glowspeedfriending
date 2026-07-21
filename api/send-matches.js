@@ -1,4 +1,7 @@
 // api/send-matches.js
+// Sends each recipient an email listing only their own mutual matches, via Resend.
+// Requires the host PIN. Returns a per-recipient result so the host can see exactly
+// which emails succeeded and, for any that failed, why.
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
@@ -9,75 +12,87 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Invalid PIN' });
   }
 
-  const RESEND_KEY = process.env.RESEND_API_KEY;
-  if (!RESEND_KEY) return res.status(500).json({ error: 'RESEND_API_KEY not set' });
-  if (!recipients?.length) return res.status(400).json({ error: 'No recipients' });
+  if (!Array.isArray(recipients) || !recipients.length) {
+    return res.status(400).json({ error: 'No recipients provided' });
+  }
+
+  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+  if (!RESEND_API_KEY) {
+    return res.status(500).json({ error: 'RESEND_API_KEY is not set in Vercel environment variables' });
+  }
+
+  // Resend only allows sending from this exact address until a custom domain
+  // is verified — any other @resend.dev address (or unverified domain) will
+  // be rejected. This is intentionally NOT configurable via the UI to avoid
+  // this exact failure mode; once a real domain is verified in Resend, update
+  // this constant (or wire it back to a verified fromEmail from cfg).
+  const VERIFIED_SENDER = 'onboarding@resend.dev';
+  const senderName = fromName || 'Go&Glow';
+  const senderEmail = (fromEmail && fromEmail !== 'hello@resend.dev') ? fromEmail : VERIFIED_SENDER;
 
   const results = [];
 
-  for (const r of recipients) {
-    if (!r.email || !r.matches?.length) continue;
+  for (const person of recipients) {
+    if (!person.email) {
+      results.push({ email: person.name || '(no email)', ok: false, error: 'No email address on file' });
+      continue;
+    }
 
-    const html = buildEmail({ recipientName: r.name, matches: r.matches, hostNote, eventName, fromName });
+    const matchListHtml = (person.matches || []).map(m => `
+      <div style="background:#fce8f2;border:1.5px solid #fad4e8;border-radius:12px;padding:0.9rem 1.1rem;margin-bottom:0.6rem;">
+        <div style="font-weight:800;font-size:0.95rem;color:#2a2a2a;margin-bottom:0.35rem;">${escapeHtml(m.name || '?')}</div>
+        ${m.email ? `<div style="font-size:0.8rem;color:#6b6b6b;">📧 <a href="mailto:${escapeHtml(m.email)}" style="color:#d4568e;text-decoration:none;">${escapeHtml(m.email)}</a></div>` : ''}
+        ${m.insta ? `<div style="font-size:0.8rem;color:#6b6b6b;">📸 ${escapeHtml(m.insta)}</div>` : ''}
+      </div>
+    `).join('');
 
-    const resp = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${RESEND_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from: `${fromName || 'Speed Friending'} <${fromEmail || 'hello@resend.dev'}>`,
-        to:   [r.email],
-        subject: `Your matches from ${eventName || 'Speed Friending'} ✦`,
-        html,
-      }),
-    });
+    const html = `
+      <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;">
+        <div style="background:#f27db6;padding:1.75rem 2rem;text-align:center;border-radius:16px 16px 0 0;">
+          <div style="font-size:1.4rem;font-weight:800;font-style:italic;color:#fff;">${escapeHtml(eventName || 'Go&Glow')} ✨</div>
+          <div style="font-size:0.75rem;color:rgba(255,255,255,0.85);margin-top:0.2rem;">Your mutual matches</div>
+        </div>
+        <div style="padding:1.5rem 2rem;background:#fff;border-radius:0 0 16px 16px;">
+          <div style="font-size:0.9rem;font-weight:700;color:#2a2a2a;margin-bottom:0.4rem;">Hi ${escapeHtml(person.name || 'there')}! 👋</div>
+          <div style="font-size:0.8rem;color:#6b6b6b;line-height:1.6;margin-bottom:1.1rem;">The feeling was mutual! Here ${(person.matches||[]).length === 1 ? 'is your match' : 'are your matches'} from tonight 💕</div>
+          ${matchListHtml}
+          ${hostNote ? `<div style="background:#fad4e8;border-radius:10px;font-style:italic;font-size:0.8rem;color:#d4568e;line-height:1.6;padding:0.9rem 1.1rem;margin-top:0.75rem;">"${escapeHtml(hostNote)}"</div>` : ''}
+          <div style="font-size:0.68rem;color:#c8c8c8;text-align:center;margin-top:1rem;">Only mutual connections see each other's details.</div>
+        </div>
+      </div>
+    `;
 
-    const data = await resp.json();
-    results.push({ email: r.email, ok: resp.ok, data });
+    try {
+      const resendRes = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${RESEND_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: `${senderName} <${senderEmail}>`,
+          to: person.email,
+          subject: `Your matches from ${eventName || 'Go&Glow'} ✨`,
+          html,
+        }),
+      });
+
+      const data = await resendRes.json();
+
+      if (!resendRes.ok) {
+        results.push({ email: person.email, ok: false, error: data.message || JSON.stringify(data) });
+      } else {
+        results.push({ email: person.email, ok: true });
+      }
+    } catch (e) {
+      results.push({ email: person.email, ok: false, error: e.message });
+    }
   }
 
   return res.status(200).json({ results });
 }
 
-function buildEmail({ recipientName, matches, hostNote, eventName, fromName }) {
-  const cards = matches.map(m => `
-    <div style="background:#fff8f6;border:1.5px solid #e8c4b8;border-radius:14px;padding:16px 18px;margin-bottom:10px;">
-      <div style="font-weight:700;font-size:15px;color:#1e1412;margin-bottom:5px;">${esc(m.name)}</div>
-      ${m.email ? `<div style="font-size:13px;color:#9e7a72;margin-bottom:3px;">📧 <a href="mailto:${esc(m.email)}" style="color:#c97d6e;text-decoration:none;">${esc(m.email)}</a></div>` : ''}
-      ${m.insta ? `<div style="font-size:13px;color:#9e7a72;">📸 <a href="https://instagram.com/${esc(m.insta.replace('@',''))}" style="color:#c97d6e;text-decoration:none;">${esc(m.insta)}</a></div>` : ''}
-    </div>`).join('');
-
-  const note = hostNote ? `
-    <div style="background:#f7e8e0;border-radius:12px;padding:14px 18px;margin:20px 0;font-size:14px;color:#7a3728;line-height:1.6;font-style:italic;">
-      "${esc(hostNote)}"<br>
-      <span style="font-style:normal;font-weight:600;font-size:12px;margin-top:5px;display:block;">— ${esc(fromName || 'Your host')}</span>
-    </div>` : '';
-
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f7e8e0;font-family:Helvetica,Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f7e8e0;padding:28px 14px;">
-    <tr><td align="center">
-      <table width="100%" style="max-width:500px;background:#fdfaf9;border-radius:20px;overflow:hidden;border:1px solid #e8c4b8;">
-        <tr><td style="background:#7a3728;padding:24px 28px;text-align:center;">
-          <div style="font-size:20px;color:#fdfaf9;font-weight:700;">${esc(eventName)} ✦</div>
-          <div style="font-size:12px;color:#e8c4b8;margin-top:3px;">Your mutual matches</div>
-        </td></tr>
-        <tr><td style="padding:24px 28px;">
-          <p style="font-size:15px;color:#1e1412;margin:0 0 6px;">Hi ${esc(recipientName)} 👋</p>
-          <p style="font-size:13px;color:#9e7a72;margin:0 0 18px;line-height:1.6;">
-            The feeling was mutual! Here ${matches.length === 1 ? 'is your match' : `are your ${matches.length} matches`} from tonight. Reach out and say hello 💌
-          </p>
-          ${cards}
-          ${note}
-          <p style="font-size:12px;color:#c4a49c;margin:18px 0 0;text-align:center;line-height:1.6;">
-            Only mutual connections see each other's details.<br>See you at the next one ✦
-          </p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`;
-}
-
-function esc(s) {
-  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function escapeHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
