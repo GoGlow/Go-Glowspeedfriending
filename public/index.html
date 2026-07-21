@@ -345,7 +345,14 @@ window.GG_SUPABASE_URL = 'https://owxzsfpsqhgheedxkspa.supabase.co';
 window.GG_ANON_KEY = 'sb_publishable_dkgdc-6H0UMjZspFEhblxA_hrX43UN6';
 addEventListener('DOMContentLoaded', () => {
   cfg = JSON.parse(localStorage.getItem(CFG_KEY) || '{}');
-  eventId = localStorage.getItem(EVENT_KEY) || uid();
+
+  // The event ID must be shared across every device — the host's QR code embeds
+  // it in the URL so every guest who scans locks onto the same event. Only fall
+  // back to a locally-stored or freshly generated ID if the URL doesn't specify one
+  // (e.g. the host opening the dashboard directly, not via the QR link).
+  const urlParams = new URLSearchParams(location.search);
+  const eventFromUrl = urlParams.get('event');
+  eventId = eventFromUrl || localStorage.getItem(EVENT_KEY) || uid();
   localStorage.setItem(EVENT_KEY, eventId);
 
   // Persistent device token — survives reloads, tab closes, app switches
@@ -983,8 +990,11 @@ async function sendEmails() {
 function genQR() {
   // Always point guests to the stable production URL, regardless of which
   // deployment preview URL the host happens to be viewing this page from.
+  // The event ID is embedded as a query param so every guest who scans this
+  // locks onto the exact same event as the host, rather than each phone
+  // inventing its own random event ID.
   const PRODUCTION_URL = 'https://go-glowspeedfriending.vercel.app/';
-  const url = PRODUCTION_URL;
+  const url = `${PRODUCTION_URL}?event=${encodeURIComponent(eventId)}`;
   document.getElementById('qr-url').textContent = url;
   document.getElementById('qrcode').innerHTML = '';
   new QRCode(document.getElementById('qrcode'), { text: url, width: 172, height: 172, colorDark: '#f27db6', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
