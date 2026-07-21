@@ -202,6 +202,43 @@
     <div class="ns-list" id="ns-list"></div>
   </div>
 
+  <!-- Profile / details to share -->
+  <div id="att-profile" class="page" style="display:none">
+    <div class="ns-wrap">
+      <span class="ns-glyph">💌</span>
+      <h1 class="ns-title">A little about you</h1>
+      <p class="ns-sub">Everything here is optional — only fill in what you're happy for a mutual match to see. You can leave anything blank.</p>
+    </div>
+    <div class="card">
+      <div class="field">
+        <label>First name</label>
+        <input id="p-first" type="text" placeholder="First name" />
+      </div>
+      <div class="field">
+        <label>Last name</label>
+        <input id="p-last" type="text" placeholder="Last name" />
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input id="p-email" type="email" placeholder="email@example.com" />
+      </div>
+      <div class="field">
+        <label>Phone number</label>
+        <input id="p-phone" type="tel" placeholder="Optional" />
+      </div>
+      <div class="field">
+        <label>WhatsApp</label>
+        <input id="p-whatsapp" type="text" placeholder="Optional — number or link" />
+      </div>
+      <div class="field" style="margin-bottom:0.5rem">
+        <label>Instagram</label>
+        <input id="p-insta" type="text" placeholder="Optional — @handle" />
+      </div>
+      <div class="pin-error" id="profile-error" style="text-align:left"></div>
+      <button class="btn btn-pink" onclick="submitProfile()">Continue</button>
+    </div>
+  </div>
+
   <!-- Tick sheet -->
   <div id="att-tick" class="page" style="display:none">
     <div class="sync-bar synced" id="sync-bar">
@@ -456,12 +493,70 @@ async function selectName(guestId, wasClaimedByOther) {
   const recoveredIds = existingSub ? (existingSub.selected_ids || []) : [];
 
   saveDraft({ guestId: g.id, selectedIds: recoveredIds, submitted: false });
+  pendingSelection = recoveredIds; // used once profile is submitted, to resume the tick sheet at the right state
 
   // Claim it to this device (best-effort — works even if this fails due to
   // offline, will retry via the sync loop)
   queueClaim(guestId);
 
-  buildTickList(recoveredIds);
+  buildProfileScreen(g);
+  showAttScreen('profile');
+}
+
+function buildProfileScreen(g) {
+  // Best-effort split of the existing name into first/last for editing —
+  // guests can freely adjust either field regardless of how it was imported.
+  const parts = (g.name || '').trim().split(/\s+/);
+  document.getElementById('p-first').value    = parts[0] || '';
+  document.getElementById('p-last').value     = parts.slice(1).join(' ') || '';
+  document.getElementById('p-email').value    = g.email || '';
+  document.getElementById('p-phone').value    = g.phone || '';
+  document.getElementById('p-whatsapp').value = g.whatsapp || '';
+  document.getElementById('p-insta').value    = g.insta || '';
+  document.getElementById('profile-error').textContent = '';
+}
+
+async function submitProfile() {
+  const first    = document.getElementById('p-first').value.trim();
+  const last     = document.getElementById('p-last').value.trim();
+  const email    = document.getElementById('p-email').value.trim();
+  const phone    = document.getElementById('p-phone').value.trim();
+  const whatsapp = document.getElementById('p-whatsapp').value.trim();
+  const insta    = document.getElementById('p-insta').value.trim();
+  const errorEl  = document.getElementById('profile-error');
+  errorEl.textContent = '';
+
+  const name = [first, last].filter(Boolean).join(' ').trim() || myGuest.name;
+
+  if (sb) {
+    try {
+      const { error } = await sb.from('guests')
+        .update({ name, email: email || myGuest.email, phone, whatsapp, insta })
+        .eq('id', myGuest.id);
+
+      if (error) {
+        // Most likely cause: changed email collides with another guest at this event
+        errorEl.textContent = error.message.includes('duplicate')
+          ? "That email is already used by someone else on the guest list — try a different one, or leave it as it was."
+          : `Couldn't save: ${error.message}`;
+        return;
+      }
+    } catch (e) {
+      errorEl.textContent = `Couldn't save (offline?) — your details will sync once you're back online.`;
+      // Don't block the flow on a network hiccup — proceed anyway, since the
+      // sync loop will retry other data regardless. Profile fields specifically
+      // aren't retried automatically, so note this to the guest rather than
+      // silently losing the edit.
+    }
+  }
+
+  // Reflect the edit locally so match cards / lists show it immediately
+  // without waiting for a full reload
+  Object.assign(myGuest, { name, email: email || myGuest.email, phone, whatsapp, insta });
+  const idx = guests.findIndex(x => x.id === myGuest.id);
+  if (idx !== -1) guests[idx] = myGuest;
+
+  buildTickList(pendingSelection || []);
   showAttScreen('tick');
 }
 
@@ -567,9 +662,10 @@ async function attSubmit() {
 }
 
 function showAttScreen(v) {
-  document.getElementById('ns-select').style.display = v === 'select' ? 'block' : 'none';
-  document.getElementById('att-tick').style.display  = v === 'tick'   ? 'block' : 'none';
-  document.getElementById('att-done').style.display   = v === 'done'   ? 'block' : 'none';
+  document.getElementById('ns-select').style.display  = v === 'select'  ? 'block' : 'none';
+  document.getElementById('att-profile').style.display = v === 'profile' ? 'block' : 'none';
+  document.getElementById('att-tick').style.display   = v === 'tick'    ? 'block' : 'none';
+  document.getElementById('att-done').style.display    = v === 'done'    ? 'block' : 'none';
 }
 
 // ══ LOAD DATA ══
@@ -949,7 +1045,7 @@ function findMatches() {
       <div class="match-heart">♡</div>
       <div>
         <div class="match-names">${esc(na)} & ${esc(nb)}</div>
-        <div class="match-det">${esc(na)}: ${esc([ga?.email,ga?.insta].filter(Boolean).join(' · ')||'—')}<br>${esc(nb)}: ${esc([gb?.email,gb?.insta].filter(Boolean).join(' · ')||'—')}</div>
+        <div class="match-det">${esc(na)}: ${esc([ga?.email,ga?.phone,ga?.whatsapp,ga?.insta].filter(Boolean).join(' · ')||'—')}<br>${esc(nb)}: ${esc([gb?.email,gb?.phone,gb?.whatsapp,gb?.insta].filter(Boolean).join(' · ')||'—')}</div>
       </div>
     </div>`;
   }).join('');
@@ -970,8 +1066,8 @@ function recordMatchHistory() {
     const ga = guests.find(g => g.id === m.a.guest_id);
     const gb = guests.find(g => g.id === m.b.guest_id);
     return {
-      aName: ga?.name || '', aEmail: ga?.email || '', aInsta: ga?.insta || '',
-      bName: gb?.name || '', bEmail: gb?.email || '', bInsta: gb?.insta || '',
+      aName: ga?.name || '', aEmail: ga?.email || '', aPhone: ga?.phone || '', aWhatsapp: ga?.whatsapp || '', aInsta: ga?.insta || '',
+      bName: gb?.name || '', bEmail: gb?.email || '', bPhone: gb?.phone || '', bWhatsapp: gb?.whatsapp || '', bInsta: gb?.insta || '',
     };
   });
 
@@ -997,7 +1093,7 @@ function buildRecipients() {
       const go = guests.find(g => g.id === other.guest_id);
       if (!gs?.email) return;
       if (!map[side.guest_id]) map[side.guest_id] = { name: gs.name, email: gs.email, matches: [] };
-      map[side.guest_id].matches.push({ name: go?.name||'?', email: go?.email||'', insta: go?.insta||'' });
+      map[side.guest_id].matches.push({ name: go?.name||'?', email: go?.email||'', phone: go?.phone||'', whatsapp: go?.whatsapp||'', insta: go?.insta||'' });
     });
   });
   return Object.values(map).filter(p => p.matches.length);
