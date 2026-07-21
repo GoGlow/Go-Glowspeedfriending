@@ -42,6 +42,8 @@ export default async function handler(req, res) {
       <div style="background:#fce8f2;border:1.5px solid #fad4e8;border-radius:12px;padding:0.9rem 1.1rem;margin-bottom:0.6rem;">
         <div style="font-weight:800;font-size:0.95rem;color:#2a2a2a;margin-bottom:0.35rem;">${escapeHtml(m.name || '?')}</div>
         ${m.email ? `<div style="font-size:0.8rem;color:#6b6b6b;">📧 <a href="mailto:${escapeHtml(m.email)}" style="color:#d4568e;text-decoration:none;">${escapeHtml(m.email)}</a></div>` : ''}
+        ${m.phone ? `<div style="font-size:0.8rem;color:#6b6b6b;">📞 ${escapeHtml(m.phone)}</div>` : ''}
+        ${m.whatsapp ? `<div style="font-size:0.8rem;color:#6b6b6b;">💬 ${escapeHtml(m.whatsapp)}</div>` : ''}
         ${m.insta ? `<div style="font-size:0.8rem;color:#6b6b6b;">📸 ${escapeHtml(m.insta)}</div>` : ''}
       </div>
     `).join('');
