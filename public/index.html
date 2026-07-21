@@ -417,10 +417,10 @@ function buildNameSelect() {
   list.innerHTML = guests.map(g => {
     const isClaimedByOther = g.claimed_by && g.claimed_by !== deviceToken;
     return `<div class="ns-row ${isClaimedByOther ? 'claimed' : ''}" data-id="${g.id}" data-name="${esc(g.name.toLowerCase())}"
-                 onclick="${isClaimedByOther ? '' : `selectName('${g.id}')`}">
+                 onclick="selectName('${g.id}', ${isClaimedByOther ? 'true' : 'false'})">
       <div class="ns-av">${g.name[0].toUpperCase()}</div>
       <div class="ns-name">${esc(g.name)}</div>
-      ${isClaimedByOther ? '<div class="ns-claimed-tag">already signed in</div>' : ''}
+      ${isClaimedByOther ? '<div class="ns-claimed-tag">tap if this is you</div>' : ''}
     </div>`;
   }).join('');
 }
@@ -432,17 +432,36 @@ function filterNames() {
   });
 }
 
-async function selectName(guestId) {
+async function selectName(guestId, wasClaimedByOther) {
   const g = guests.find(x => x.id === guestId);
   if (!g) return;
 
-  myGuest = g;
-  saveDraft({ guestId: g.id, selectedIds: [], submitted: false });
+  // If this name was already claimed on another device (e.g. lost phone,
+  // cleared browser, borrowed someone else's phone), confirm before taking
+  // it over — this is deliberately a soft check, not a hard block, since we
+  // have no reliable way to verify identity beyond asking.
+  if (wasClaimedByOther) {
+    const ok = confirm(
+      `"${g.name}" looks like it was already opened on another device.\n\nIf this is you (e.g. you lost your phone or cleared your browser), tap OK to continue — your previous picks will be restored if you'd already started.`
+    );
+    if (!ok) return;
+  }
 
-  // Claim it (best-effort — works even if this fails due to offline, will retry)
+  myGuest = g;
+
+  // Pull back any progress already saved on the server for this guest — their
+  // ticks are synced continuously as they go, not just on final submit, so
+  // this recovers their state even if their original device is gone.
+  const existingSub = subs.find(s => s.guest_id === guestId);
+  const recoveredIds = existingSub ? (existingSub.selected_ids || []) : [];
+
+  saveDraft({ guestId: g.id, selectedIds: recoveredIds, submitted: false });
+
+  // Claim it to this device (best-effort — works even if this fails due to
+  // offline, will retry via the sync loop)
   queueClaim(guestId);
 
-  buildTickList([]);
+  buildTickList(recoveredIds);
   showAttScreen('tick');
 }
 
@@ -890,6 +909,11 @@ async function clearGuestList() {
     matches = [];
     document.getElementById('email-panel').style.display = 'none';
     document.getElementById('s-matches').textContent = '—';
+    document.getElementById('match-list').innerHTML = '<div class="empty">Matches will appear here.</div>';
+    document.getElementById('host-note').value = '';
+    document.getElementById('preview-list').textContent = '—';
+    document.getElementById('send-status').textContent = '';
+    document.getElementById('send-status').className = 'send-status';
     await loadGuests();
     await loadSubs();
     refreshHostDash();
@@ -930,7 +954,31 @@ function findMatches() {
     </div>`;
   }).join('');
 
+  recordMatchHistory();
+
   showEmailPanel();
+}
+
+// Records mutual matches to a safety/audit log (never one-sided ticks) — see
+// api/record-matches.js. Fires silently in the background; a failure here
+// should never interrupt the host's flow, so errors are swallowed rather than
+// surfaced with a toast.
+function recordMatchHistory() {
+  if (!matches.length) return;
+
+  const payload = matches.map(m => {
+    const ga = guests.find(g => g.id === m.a.guest_id);
+    const gb = guests.find(g => g.id === m.b.guest_id);
+    return {
+      aName: ga?.name || '', aEmail: ga?.email || '', aInsta: ga?.insta || '',
+      bName: gb?.name || '', bEmail: gb?.email || '', bInsta: gb?.insta || '',
+    };
+  });
+
+  fetch('/api/record-matches', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ eventId, matches: payload, pin: storedPin() }),
+  }).catch(() => {}); // best-effort — safety log shouldn't block the host's flow
 }
 
 function showEmailPanel() {
