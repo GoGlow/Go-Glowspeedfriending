@@ -1019,16 +1019,31 @@ async function sendEmails() {
         recipients, hostNote,
         eventName: cfg.eventName || 'Go&Glow Speed Friending',
         fromName:  cfg.hostName  || 'Go&Glow',
-        fromEmail: cfg.fromEmail || 'hello@resend.dev',
+        fromEmail: cfg.fromEmail || 'onboarding@resend.dev',
         pin: storedPin(),
       }),
     });
     const data = await res.json();
+
+    if (!res.ok) {
+      statusEl.textContent = `Error (${res.status}): ${data.error || 'unknown error'}`;
+      statusEl.className = 'send-status err';
+      btn.disabled = false;
+      return;
+    }
+
     const ok = data.results?.filter(r=>r.ok).length || 0;
     const fail = data.results?.filter(r=>!r.ok).length || 0;
-    statusEl.textContent = fail === 0 ? `✓ ${ok} email${ok!==1?'s':''} sent!` : `${ok} sent, ${fail} failed`;
-    statusEl.className = 'send-status ' + (fail === 0 ? 'ok' : 'err');
-    if (fail === 0) toast('Emails sent! ✓');
+
+    if (fail === 0) {
+      statusEl.textContent = `✓ ${ok} email${ok!==1?'s':''} sent!`;
+      statusEl.className = 'send-status ok';
+      toast('Emails sent! ✓');
+    } else {
+      const firstError = data.results.find(r => !r.ok)?.error || 'unknown error';
+      statusEl.textContent = `${ok} sent, ${fail} failed — ${firstError}`;
+      statusEl.className = 'send-status err';
+    }
   } catch(e) {
     statusEl.textContent = 'Network error'; statusEl.className = 'send-status err';
   } finally { btn.disabled = false; }
