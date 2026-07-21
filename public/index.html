@@ -8,30 +8,30 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,300;0,400;0,600;0,700;0,800;1,400&display=swap');
- 
+
   :root {
     --pink: #f27db6; --pink-light: #fad4e8; --pink-pale: #fce8f2; --pink-deep: #d4568e;
     --grey-dark: #6b6b6b; --grey-mid: #8a8a8a; --grey-light: #e8e8e8; --grey-bg: #f4f4f6;
     --white: #fff; --ink: #2a2a2a; --mint: #a8d5ba; --mint-bg: #f0faf5; --green: #4a9068;
     --amber: #f5a623; --amber-bg: #fff8ee;
   }
- 
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--grey-bg); color: var(--ink); font-family: 'Nunito', sans-serif; min-height: 100vh; }
- 
+
   .nav { background: var(--white); border-bottom: 1px solid var(--grey-light); display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; position: sticky; top: 0; z-index: 50; box-shadow: 0 2px 12px rgba(0,0,0,0.05); }
   .nav-logo { font-weight: 800; font-style: italic; font-size: 1.3rem; color: var(--pink); }
   .nav-tabs { display: flex; gap: 0.25rem; background: var(--pink-pale); border-radius: 100px; padding: 0.25rem; }
   .nav-tab  { background: none; border: none; border-radius: 100px; color: var(--pink); cursor: pointer; font-family: 'Nunito', sans-serif; font-size: 0.8rem; font-weight: 700; padding: 0.4rem 1rem; transition: all 0.2s; }
   .nav-tab.active { background: var(--white); color: var(--grey-dark); box-shadow: 0 1px 6px rgba(0,0,0,0.1); }
- 
+
   .screen { display: none; }
   .screen.active { display: block; }
   .page { max-width: 520px; margin: 0 auto; padding: 2.2rem 1.25rem; }
   .page.wide { max-width: 760px; }
- 
+
   .card { background: var(--white); border-radius: 20px; padding: 1.75rem; box-shadow: 0 2px 16px rgba(242,125,182,0.1); }
- 
+
   .field { margin-bottom: 1.1rem; }
   .field label { display: block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--grey-mid); margin-bottom: 0.35rem; }
   .field input, .field textarea {
@@ -40,7 +40,7 @@
   }
   .field input:focus, .field textarea:focus { border-color: var(--pink); background: var(--white); }
   .field-hint { font-size: 0.72rem; color: var(--grey-mid); margin-top: 0.3rem; line-height: 1.4; }
- 
+
   .btn { display: block; width: 100%; border: none; border-radius: 12px; cursor: pointer; font-family: 'Nunito', sans-serif; font-size: 0.95rem; font-weight: 800; padding: 0.85rem 1.5rem; text-align: center; transition: opacity 0.2s, transform 0.15s; }
   .btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
   .btn:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -49,21 +49,21 @@
   .btn-ghost { background: none; border: 1.5px solid var(--grey-light); color: var(--grey-mid); }
   .btn-ghost:hover:not(:disabled) { border-color: var(--pink); color: var(--pink); }
   .btn-sm    { width: auto; display: inline-block; font-size: 0.78rem; padding: 0.4rem 0.9rem; border-radius: 8px; }
- 
+
   /* ── NAME SELECT (auth replacement) ── */
   .ns-wrap { text-align: center; }
   .ns-glyph { font-size: 2rem; display: block; margin-bottom: 0.6rem; }
   .ns-title { font-size: 1.7rem; font-weight: 800; color: var(--grey-dark); line-height: 1.2; margin-bottom: 0.5rem; }
   .ns-sub   { color: var(--grey-mid); font-size: 0.88rem; line-height: 1.6; margin-bottom: 1.5rem; }
- 
+
   .ns-search {
     background: var(--white); border: 1.5px solid var(--grey-light); border-radius: 12px;
     margin-bottom: 0.85rem; padding: 0.75rem 1rem; font-size: 0.95rem; width: 100%; outline: none;
   }
   .ns-search:focus { border-color: var(--pink); }
- 
+
   .ns-list { display: flex; flex-direction: column; gap: 0.4rem; max-height: 360px; overflow-y: auto; }
- 
+
   .ns-row {
     background: var(--white); border: 1.5px solid var(--grey-light); border-radius: 12px;
     cursor: pointer; display: flex; align-items: center; gap: 0.7rem; padding: 0.7rem 1rem; transition: all 0.15s;
@@ -73,7 +73,7 @@
   .ns-av { width: 32px; height: 32px; border-radius: 50%; background: var(--pink-pale); display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 800; color: var(--pink); flex-shrink: 0; }
   .ns-name { font-size: 0.88rem; font-weight: 700; text-align: left; }
   .ns-claimed-tag { margin-left: auto; font-size: 0.65rem; color: var(--grey-mid); font-style: italic; }
- 
+
   /* ── SYNC STATUS BAR ── */
   .sync-bar {
     display: flex; align-items: center; gap: 0.4rem; justify-content: center;
@@ -86,19 +86,19 @@
   .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
   .sync-dot.pulse { animation: pulse 1s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
- 
+
   /* ── TICK SHEET ── */
   .tick-header { text-align: center; margin-bottom: 1.1rem; }
   .tick-title { font-size: 1.5rem; font-weight: 800; color: var(--grey-dark); margin-bottom: 0.3rem; }
   .tick-sub   { color: var(--grey-mid); font-size: 0.85rem; line-height: 1.5; }
   .tick-count { text-align: center; font-size: 0.82rem; color: var(--grey-mid); margin-bottom: 0.9rem; font-weight: 600; }
   .tick-count strong { color: var(--pink); font-size: 0.95rem; }
- 
+
   .tick-list { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1.4rem; }
   .tick-row { display: flex; align-items: center; gap: 0.85rem; background: var(--white); border: 1.5px solid var(--grey-light); border-radius: 13px; cursor: pointer; padding: 0.8rem 1.05rem; transition: all 0.15s; user-select: none; }
   .tick-row:hover { border-color: var(--pink-light); }
   .tick-row.on { background: var(--mint-bg); border-color: var(--mint); }
- 
+
   .t-box { width: 22px; height: 22px; border: 2px solid var(--pink-light); border-radius: 6px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
   .tick-row.on .t-box { background: var(--mint); border-color: var(--mint); }
   .t-check { color: var(--white); font-size: 0.68rem; font-weight: 800; opacity: 0; transition: opacity 0.13s; }
@@ -106,72 +106,72 @@
   .t-av { width: 36px; height: 36px; border-radius: 50%; background: var(--pink-pale); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; font-weight: 800; color: var(--pink); }
   .t-name { font-weight: 700; font-size: 0.9rem; }
   .t-insta { font-size: 0.76rem; color: var(--grey-mid); }
- 
+
   .done-wrap { text-align: center; padding-top: 3rem; }
   .done-icon { font-size: 3rem; display: block; margin-bottom: 0.7rem; animation: pop 0.4s cubic-bezier(0.34,1.56,0.64,1); }
   @keyframes pop { 0%{transform:scale(0.3);opacity:0} 100%{transform:scale(1);opacity:1} }
- 
+
   /* ── HOST ── */
   .pin-wrap { text-align: center; }
   .pin-inputs { display: flex; gap: 0.5rem; justify-content: center; margin: 1.5rem 0; }
   .pin-input { width: 52px; height: 60px; background: var(--white); border: 2px solid var(--grey-light); border-radius: 12px; color: var(--pink); font-size: 1.6rem; font-weight: 800; text-align: center; outline: none; transition: border-color 0.2s; }
   .pin-input:focus { border-color: var(--pink); }
   .pin-error { color: var(--pink-deep); font-size: 0.83rem; min-height: 1.2em; margin-bottom: 0.5rem; }
- 
+
   .section-head { display: flex; align-items: baseline; justify-content: space-between; margin: 2rem 0 0.8rem; }
   .section-title { font-size: 1.15rem; font-weight: 800; color: var(--grey-dark); }
- 
+
   .qr-card { text-align: center; }
   .qr-sub { color: var(--grey-mid); font-size: 0.82rem; margin-bottom: 1rem; }
   #qrcode { display: inline-block; }
   .qr-url { font-size: 0.73rem; color: var(--grey-mid); margin-top: 0.55rem; word-break: break-all; }
- 
+
   .import-tabs { display: flex; gap: 0.4rem; margin-bottom: 0.85rem; }
   .import-tab { flex: 1; background: var(--white); border: 1.5px solid var(--grey-light); border-radius: 10px; padding: 0.55rem; text-align: center; font-size: 0.78rem; font-weight: 700; color: var(--grey-mid); cursor: pointer; }
   .import-tab.active { border-color: var(--pink); color: var(--pink); background: var(--pink-pale); }
- 
+
   .stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 0.6rem; margin-bottom: 0.5rem; }
   .stat { background: var(--white); border-radius: 13px; padding: 1rem; text-align: center; box-shadow: 0 1px 6px rgba(0,0,0,0.05); }
   .stat-n { font-size: 1.9rem; font-weight: 800; color: var(--pink); line-height: 1; }
   .stat-l { color: var(--grey-mid); font-size: 0.7rem; margin-top: 0.2rem; }
- 
+
   .live { display: flex; align-items: center; gap: 0.38rem; font-size: 0.76rem; color: var(--grey-mid); margin-bottom: 0.9rem; }
   .live-dot { width: 7px; height: 7px; background: var(--green); border-radius: 50%; animation: pulse 1.6s infinite; }
- 
+
   .sub-list { display: flex; flex-direction: column; gap: 0.4rem; }
   .sub-row { background: var(--white); border-radius: 11px; display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.75rem 1rem; box-shadow: 0 1px 6px rgba(0,0,0,0.04); }
   .sub-name { font-weight: 700; font-size: 0.87rem; }
   .sub-det  { font-size: 0.74rem; color: var(--grey-mid); margin-top: 0.1rem; }
   .sub-pill { background: var(--pink-pale); border-radius: 100px; color: var(--pink-deep); font-size: 0.74rem; font-weight: 700; padding: 0.2rem 0.65rem; white-space: nowrap; }
   .sub-pill.pending { background: var(--amber-bg); color: var(--amber); }
- 
+
   .match-card { background: var(--white); border: 1.5px solid var(--pink-light); border-radius: 15px; display: flex; align-items: flex-start; gap: 0.85rem; margin-bottom: 0.6rem; padding: 1rem 1.2rem; animation: up 0.22s ease; }
   @keyframes up { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
   .match-heart { color: var(--pink); font-size: 1.05rem; flex-shrink: 0; margin-top: 2px; }
   .match-names { font-weight: 800; font-size: 0.92rem; margin-bottom: 0.22rem; }
   .match-det { font-size: 0.76rem; color: var(--grey-mid); line-height: 1.5; }
- 
+
   .email-panel { background: var(--white); border-radius: 16px; overflow: hidden; margin-top: 0.75rem; box-shadow: 0 2px 16px rgba(0,0,0,0.06); }
   .panel-head { background: var(--pink); color: var(--white); padding: 0.9rem 1.2rem; }
   .panel-head h3 { font-size: 1rem; margin-bottom: 0.1rem; }
   .panel-head p { font-size: 0.76rem; color: rgba(255,255,255,0.85); }
   .panel-body { padding: 1.2rem; display: flex; flex-direction: column; gap: 0.85rem; }
- 
+
   .preview-box { background: var(--grey-bg); border-radius: 10px; padding: 0.9rem 1.1rem; }
   .preview-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--grey-mid); margin-bottom: 0.45rem; }
   .preview-list { font-size: 0.81rem; color: var(--ink); line-height: 1.6; }
   .preview-list strong { color: var(--pink-deep); }
- 
+
   .send-status { text-align: center; font-size: 0.81rem; color: var(--grey-mid); min-height: 1.1em; }
   .send-status.ok { color: var(--green); }
   .send-status.err { color: var(--pink-deep); }
- 
+
   hr { border: none; border-top: 1px solid var(--grey-light); margin: 1.6rem 0; }
   .empty { background: var(--white); border-radius: 12px; color: var(--grey-mid); font-size: 0.86rem; padding: 1.5rem; text-align: center; }
- 
+
   #toast { position: fixed; bottom: 1.6rem; left: 50%; transform: translateX(-50%) translateY(120px); background: var(--ink); color: var(--white); border-radius: 9px; font-size: 0.8rem; padding: 0.6rem 1rem; transition: transform 0.26s; z-index: 999; white-space: nowrap; }
   #toast.show { transform: translateX(-50%) translateY(0); }
- 
+
   @media (max-width: 480px) {
     .stats { grid-template-columns: 1fr 1fr; }
     .pin-input { width: 44px; height: 52px; font-size: 1.35rem; }
@@ -179,7 +179,7 @@
 </style>
 </head>
 <body>
- 
+
 <nav class="nav">
   <div class="nav-logo">Go&Glow</div>
   <div class="nav-tabs">
@@ -187,10 +187,10 @@
     <button class="nav-tab"        id="tab-host" onclick="showTab('host')">Host ✨</button>
   </div>
 </nav>
- 
+
 <!-- ══ ATTENDEE ══ -->
 <div id="screen-att" class="screen active">
- 
+
   <!-- Name select (replaces login) -->
   <div id="ns-select" class="page">
     <div class="ns-wrap">
@@ -201,7 +201,7 @@
     <input class="ns-search" id="ns-search" type="text" placeholder="Search your name…" oninput="filterNames()" />
     <div class="ns-list" id="ns-list"></div>
   </div>
- 
+
   <!-- Tick sheet -->
   <div id="att-tick" class="page" style="display:none">
     <div class="sync-bar synced" id="sync-bar">
@@ -215,16 +215,16 @@
     <div class="tick-list" id="tick-list"></div>
     <button class="btn btn-pink" onclick="attSubmit()" id="btn-submit">Submit my choices</button>
   </div>
- 
+
   <!-- Done -->
   <div id="att-done" class="page done-wrap" style="display:none">
     <span class="done-icon">💌</span>
     <h2 class="tick-title">You're all set!</h2>
     <p class="tick-sub">Your choices are saved. Check your inbox after the event — your matches will arrive by email.</p>
   </div>
- 
+
 </div>
- 
+
 <!-- ══ HOST PIN GATE ══ -->
 <div id="screen-pin" class="screen">
   <div class="page pin-wrap">
@@ -241,25 +241,25 @@
     <button class="btn btn-pink" onclick="checkPin()">Unlock →</button>
   </div>
 </div>
- 
+
 <!-- ══ HOST DASHBOARD ══ -->
 <div id="screen-host" class="screen">
   <div class="page wide">
- 
+
     <div class="card qr-card" style="margin-bottom:0">
       <h3 style="margin-bottom:0.3rem">Share with guests</h3>
       <p class="qr-sub">They scan, find their name, and start ticking.</p>
       <div id="qrcode"></div>
       <div class="qr-url" id="qr-url"></div>
     </div>
- 
+
     <div class="section-head"><div class="section-title">Import guest list</div></div>
- 
+
     <div class="import-tabs">
       <div class="import-tab active" id="imp-tab-csv" onclick="switchImportTab('csv')">📋 Paste CSV</div>
       <div class="import-tab" id="imp-tab-manual" onclick="switchImportTab('manual')">✍️ Add manually</div>
     </div>
- 
+
     <div id="imp-csv">
       <div class="field" style="margin-bottom:0.6rem">
         <textarea id="import-csv" rows="5" placeholder="Paste your Ticket Tailor export here, or one per line:&#10;Alice, alice@example.com&#10;priya@example.com&#10;Sofia, sofia@example.com"></textarea>
@@ -268,7 +268,7 @@
       <button class="btn btn-pink btn-sm" onclick="importEmails()">Import guest list</button>
       <span id="import-status" style="font-size:0.8rem;color:var(--grey-mid);margin-left:0.5rem"></span>
     </div>
- 
+
     <div id="imp-manual" style="display:none">
       <div class="field" style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.5rem">
         <input id="m-name" type="text" placeholder="Name" />
@@ -276,25 +276,25 @@
       </div>
       <button class="btn btn-pink btn-sm" onclick="addOneGuest()">+ Add guest</button>
     </div>
- 
+
     <hr>
- 
+
     <div class="live"><span class="live-dot"></span> Live — updates automatically, even from patchy connections</div>
     <div class="stats">
       <div class="stat"><div class="stat-n" id="s-guests">0</div><div class="stat-l">guests</div></div>
       <div class="stat"><div class="stat-n" id="s-subs">0</div><div class="stat-l">submitted</div></div>
       <div class="stat"><div class="stat-n" id="s-matches">—</div><div class="stat-l">matches</div></div>
     </div>
- 
+
     <div class="section-head"><div class="section-title">Submissions</div></div>
     <div id="sub-list" class="sub-list"><div class="empty">No submissions yet.</div></div>
- 
+
     <hr>
- 
+
     <div class="section-head"><div class="section-title">Mutual matches</div></div>
     <button class="btn btn-pink" onclick="findMatches()" style="margin-bottom:1rem">✨ Find all mutual matches</button>
     <div id="match-list"><div class="empty">Matches will appear here.</div></div>
- 
+
     <div class="email-panel" id="email-panel" style="display:none">
       <div class="panel-head">
         <h3>Email matches to everyone</h3>
@@ -313,16 +313,16 @@
         <div class="send-status" id="send-status"></div>
       </div>
     </div>
- 
+
     <div style="margin-top:2rem;text-align:center">
       <button class="btn btn-ghost btn-sm" onclick="lockHost()">Lock host dashboard</button>
     </div>
- 
+
   </div>
 </div>
- 
+
 <div id="toast"></div>
- 
+
 <script>
 // ══ GLOBALS ══
 let sb = null, eventId = null, cfg = {};
@@ -330,13 +330,13 @@ let guests = [], subs = [], matches = [];
 let rtChannel = null;
 let deviceToken = null, myGuest = null;
 let syncTimer = null, pendingSelection = null;
- 
+
 const CFG_KEY    = 'gg_cfg_v4';
 const EVENT_KEY  = 'gg_eid_v4';
 const DEVICE_KEY = 'gg_device_v4';
 const DRAFT_KEY  = 'gg_draft_v4';   // local draft of ticked choices, survives offline
 const PIN_KEY    = 'gg_pin_unlocked';
- 
+
 // ══ BOOT ══
 window.GG_SUPABASE_URL = 'https://owxzsfpsqhgheedxkspa.supabase.co';
 window.GG_ANON_KEY = 'sb_publishable_dkgdc-6H0UMjZspFEhblxA_hrX43UN6';
@@ -344,17 +344,17 @@ addEventListener('DOMContentLoaded', () => {
   cfg = JSON.parse(localStorage.getItem(CFG_KEY) || '{}');
   eventId = localStorage.getItem(EVENT_KEY) || uid();
   localStorage.setItem(EVENT_KEY, eventId);
- 
+
   // Persistent device token — survives reloads, tab closes, app switches
   deviceToken = localStorage.getItem(DEVICE_KEY);
   if (!deviceToken) {
     deviceToken = uid() + uid();
     localStorage.setItem(DEVICE_KEY, deviceToken);
   }
- 
+
   const SUPABASE_URL = cfg.url || window.GG_SUPABASE_URL;
   const ANON_KEY     = cfg.key || window.GG_ANON_KEY;
- 
+
   if (SUPABASE_URL && ANON_KEY) {
     sb = supabase.createClient(SUPABASE_URL, ANON_KEY);
     initApp();
@@ -364,20 +364,20 @@ addEventListener('DOMContentLoaded', () => {
         ⚠️ App not configured yet. Set the Supabase URL and anon key in the script — see SETUP.md.
       </p>`;
   }
- 
+
   // Resume sync loop regardless of online state — it just retries quietly
   startSyncLoop();
- 
+
   // React to connectivity changes immediately rather than waiting for the poll
   window.addEventListener('online',  () => { setSyncState('syncing'); attemptSync(); });
   window.addEventListener('offline', () => setSyncState('offline'));
 });
- 
+
 async function initApp() {
   await loadGuests();
   await loadSubs();
   setupRT();
- 
+
   // Did this device already claim a name and submit?
   const draft = getDraft();
   if (draft && draft.guestId) {
@@ -392,11 +392,11 @@ async function initApp() {
       return;
     }
   }
- 
+
   buildNameSelect();
   showAttScreen('select');
 }
- 
+
 // ══ NAME SELECT (replaces login) ══
 function buildNameSelect() {
   const list = document.getElementById('ns-list');
@@ -414,35 +414,35 @@ function buildNameSelect() {
     </div>`;
   }).join('');
 }
- 
+
 function filterNames() {
   const q = document.getElementById('ns-search').value.toLowerCase();
   document.querySelectorAll('.ns-row').forEach(row => {
     row.style.display = row.dataset.name.includes(q) ? 'flex' : 'none';
   });
 }
- 
+
 async function selectName(guestId) {
   const g = guests.find(x => x.id === guestId);
   if (!g) return;
- 
+
   myGuest = g;
   saveDraft({ guestId: g.id, selectedIds: [], submitted: false });
- 
+
   // Claim it (best-effort — works even if this fails due to offline, will retry)
   queueClaim(guestId);
- 
+
   buildTickList([]);
   showAttScreen('tick');
 }
- 
+
 function queueClaim(guestId) {
   if (!sb) return;
   sb.from('guests').update({ claimed_by: deviceToken }).eq('id', guestId)
     .then(() => {})
     .catch(() => {}); // silent — sync loop will reconcile state on reconnect anyway
 }
- 
+
 // ══ TICK SHEET ══
 function buildTickList(preSelected) {
   const others = guests.filter(g => g.id !== myGuest.id);
@@ -459,21 +459,21 @@ function buildTickList(preSelected) {
     </div>`).join('');
   updateTickN();
 }
- 
+
 function toggleTick(el) {
   el.classList.toggle('on');
   updateTickN();
   saveCurrentDraft(false);   // save on every tick — this is the core offline-resilience step
 }
- 
+
 function updateTickN() {
   document.getElementById('tick-n').textContent = document.querySelectorAll('.tick-row.on').length;
 }
- 
+
 function getSelectedIds() {
   return [...document.querySelectorAll('.tick-row.on')].map(el => el.dataset.id);
 }
- 
+
 // ══ LOCAL DRAFT (the offline-safety layer) ══
 function saveDraft(draft) {
   localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
@@ -487,19 +487,19 @@ function saveCurrentDraft(submitted) {
   setSyncState('syncing');
   attemptSync();
 }
- 
+
 // ══ SYNC LOOP — retries quietly, never blocks the UI ══
 function startSyncLoop() {
   attemptSync();
   syncTimer = setInterval(attemptSync, 4000);
 }
- 
+
 async function attemptSync() {
   if (!sb || !navigator.onLine) { setSyncState('offline'); return; }
- 
+
   const draft = getDraft();
   if (!draft || !draft.guestId) { setSyncState('synced'); return; }
- 
+
   try {
     const { error } = await sb.from('submissions').upsert({
       event_id:     eventId,
@@ -508,15 +508,15 @@ async function attemptSync() {
       selected_ids: draft.selectedIds || [],
       updated_at:   new Date().toISOString(),
     }, { onConflict: 'event_id,guest_id' });
- 
+
     if (error) throw error;
- 
+
     setSyncState('synced');
   } catch (e) {
     setSyncState('offline');
   }
 }
- 
+
 function setSyncState(state) {
   const bar = document.getElementById('sync-bar');
   const txt = document.getElementById('sync-text');
@@ -527,7 +527,7 @@ function setSyncState(state) {
   if (state === 'syncing') txt.textContent = 'Saving…';
   if (state === 'offline') txt.textContent = 'Saved on your phone — will sync when back online';
 }
- 
+
 // ══ SUBMIT ══
 async function attSubmit() {
   const selected = getSelectedIds();
@@ -536,13 +536,13 @@ async function attSubmit() {
   await attemptSync();
   showAttScreen('done');
 }
- 
+
 function showAttScreen(v) {
   document.getElementById('ns-select').style.display = v === 'select' ? 'block' : 'none';
   document.getElementById('att-tick').style.display  = v === 'tick'   ? 'block' : 'none';
   document.getElementById('att-done').style.display   = v === 'done'   ? 'block' : 'none';
 }
- 
+
 // ══ LOAD DATA ══
 async function loadGuests() {
   if (!sb) return;
@@ -554,7 +554,7 @@ async function loadSubs() {
   const { data } = await sb.from('submissions').select('*').eq('event_id', eventId);
   subs = data || [];
 }
- 
+
 // ══ REALTIME ══
 function setupRT() {
   if (!sb) return;
@@ -564,7 +564,7 @@ function setupRT() {
     .on('postgres_changes', { event:'*', schema:'public', table:'submissions', filter:`event_id=eq.${eventId}` }, async () => { await loadSubs(); refreshHostDash(); })
     .subscribe();
 }
- 
+
 // ══ TABS ══
 function showTab(t) {
   if (t === 'host') {
@@ -576,11 +576,11 @@ function showTab(t) {
   document.getElementById('tab-att').classList.add('active');
   document.getElementById('tab-host').classList.remove('active');
 }
- 
+
 function showScreen(s) {
   ['att','pin','host'].forEach(x => document.getElementById('screen-' + x).classList.toggle('active', x === s));
 }
- 
+
 // ══ HOST PIN ══
 function pinNext(i) {
   const v = document.getElementById('pin' + i).value;
@@ -590,36 +590,36 @@ function pinNext(i) {
 function pinKey(e, i) {
   if (e.key === 'Backspace' && !document.getElementById('pin' + i).value && i > 0) document.getElementById('pin' + (i-1)).focus();
 }
- 
+
 async function checkPin() {
   const pin = [0,1,2,3].map(i => document.getElementById('pin'+i).value).join('');
   if (pin.length < 4) { document.getElementById('pin-error').textContent = 'Enter all 4 digits'; return; }
- 
+
   const res = await fetch('/api/import-emails', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ guests: [], eventId, pin }),
   });
- 
+
   if (res.status === 401) {
     document.getElementById('pin-error').textContent = 'Incorrect PIN — try again';
     [0,1,2,3].forEach(i => document.getElementById('pin'+i).value = '');
     document.getElementById('pin0').focus();
     return;
   }
- 
+
   sessionStorage.setItem(PIN_KEY, 'yes');
   sessionStorage.setItem('gg_pin_val', pin);
   document.getElementById('pin-error').textContent = '';
   openHostDash();
 }
- 
+
 function lockHost() {
   sessionStorage.removeItem(PIN_KEY);
   showTab('att');
 }
- 
+
 function storedPin() { return sessionStorage.getItem('gg_pin_val') || ''; }
- 
+
 // ══ HOST DASHBOARD ══
 async function openHostDash() {
   showScreen('host');
@@ -630,17 +630,17 @@ async function openHostDash() {
   refreshHostDash();
   setupRT();
 }
- 
+
 function refreshHostDash() {
   document.getElementById('s-guests').textContent = guests.length;
   document.getElementById('s-subs').textContent = subs.length;
   renderSubs();
 }
- 
+
 function renderSubs() {
   const el = document.getElementById('sub-list');
   if (!guests.length) { el.innerHTML = '<div class="empty">Import the guest list first.</div>'; return; }
- 
+
   el.innerHTML = guests.map(g => {
     const s = subs.find(x => x.guest_id === g.id);
     if (s) return `<div class="sub-row">
@@ -653,7 +653,7 @@ function renderSubs() {
     </div>`;
   }).join('');
 }
- 
+
 // ══ IMPORT ══
 function switchImportTab(t) {
   document.getElementById('imp-tab-csv').classList.toggle('active', t === 'csv');
@@ -661,24 +661,24 @@ function switchImportTab(t) {
   document.getElementById('imp-csv').style.display = t === 'csv' ? 'block' : 'none';
   document.getElementById('imp-manual').style.display = t === 'manual' ? 'block' : 'none';
 }
- 
+
 async function importEmails() {
   const raw = document.getElementById('import-csv').value.trim();
   if (!raw) { toast('Paste some emails or a CSV first'); return; }
- 
+
   const unique = parseGuestCSV(raw);
- 
+
   if (!unique.length) { toast('No valid emails found in that text'); return; }
- 
+
   const statusEl = document.getElementById('import-status');
   statusEl.textContent = 'Importing…';
- 
+
   try {
     const res = await fetch('/api/import-emails', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ guests: unique, eventId, pin: storedPin() }),
     });
- 
+
     let data;
     try {
       data = await res.json();
@@ -686,12 +686,12 @@ async function importEmails() {
       statusEl.textContent = `Server returned an unexpected response (status ${res.status}). Check Vercel function logs.`;
       return;
     }
- 
+
     if (!res.ok) {
       statusEl.textContent = `Error (${res.status}): ${data.error || 'unknown error'}`;
       return;
     }
- 
+
     statusEl.textContent = `✓ ${data.imported} imported`;
     document.getElementById('import-csv').value = '';
     await loadGuests();
@@ -701,21 +701,21 @@ async function importEmails() {
     statusEl.textContent = `Network error: ${networkErr.message}`;
   }
 }
- 
+
 // Proper CSV/TSV parser — handles real multi-column exports (Ticket Tailor, Eventbrite, etc.)
 // with or without a header row, tab- or comma-separated, quoted fields, and falls back to
 // loose "Name, email" line parsing for manual pastes.
 function parseGuestCSV(raw) {
   const lines = raw.split(/\r?\n/).filter(l => l.trim().length > 0);
   if (!lines.length) return [];
- 
+
   const emailRegex = /^[\w.+-]+@[\w-]+\.[\w.-]+$/;
   const emailAnywhere = /[\w.+-]+@[\w-]+\.[\w.-]+/;
- 
+
   // Detect delimiter from the first line — Ticket Tailor's own exports are often
   // tab-separated when copy-pasted directly from their guest list view.
   const delimiter = lines[0].includes('\t') ? '\t' : ',';
- 
+
   function parseLine(line) {
     if (delimiter === '\t') {
       return line.split('\t').map(f => f.trim());
@@ -739,16 +739,16 @@ function parseGuestCSV(raw) {
     fields.push(cur);
     return fields.map(f => f.trim());
   }
- 
+
   const firstRowFields = parseLine(lines[0]);
   const firstRowLower = firstRowFields.map(h => h.toLowerCase().replace(/[^a-z]/g, ''));
   const headerEmailIdx = firstRowLower.findIndex(h => h.includes('email'));
- 
+
   // A genuine header row has "email" as a column label, not an actual email address in it
   const looksLikeHeader = headerEmailIdx !== -1 && !emailRegex.test(firstRowFields[headerEmailIdx]);
- 
+
   const guests = [];
- 
+
   if (looksLikeHeader) {
     // Structured export WITH a header row — find columns by name
     const firstNameIdx = firstRowLower.findIndex(h => h === 'firstname' || h === 'first');
@@ -757,12 +757,12 @@ function parseGuestCSV(raw) {
       (h.includes('name') && !h.includes('event') && !h.includes('ticket') && !h.includes('file'))
       && h !== 'firstname' && h !== 'lastname' && h !== 'first' && h !== 'last' && h !== 'surname'
     );
- 
+
     for (let i = 1; i < lines.length; i++) {
       const row = parseLine(lines[i]);
       const email = (row[headerEmailIdx] || '').trim().toLowerCase();
       if (!emailRegex.test(email)) continue;
- 
+
       let name = '';
       if (firstNameIdx !== -1 || lastNameIdx !== -1) {
         name = [row[firstNameIdx] || '', row[lastNameIdx] || ''].join(' ').trim();
@@ -776,7 +776,7 @@ function parseGuestCSV(raw) {
     // "First Name / Last Name / Email" copy-paste with no header at all)
     let positionalWorked = true;
     const positionalGuests = [];
- 
+
     for (const line of lines) {
       const row = parseLine(line);
       const emailFieldIdx = row.findIndex(f => emailRegex.test(f.trim()));
@@ -785,7 +785,7 @@ function parseGuestCSV(raw) {
       const name = row.filter((_, i) => i !== emailFieldIdx).join(' ').trim();
       positionalGuests.push({ name, email });
     }
- 
+
     if (positionalWorked && positionalGuests.length) {
       guests.push(...positionalGuests);
     } else {
@@ -802,7 +802,7 @@ function parseGuestCSV(raw) {
       });
     }
   }
- 
+
   // De-dupe by email, and fall back to email prefix only if truly no name was found anywhere
   const seen = new Set();
   return guests
@@ -814,19 +814,19 @@ function parseGuestCSV(raw) {
     })
     .map(g => ({ name: g.name || g.email.split('@')[0], email: g.email }));
 }
- 
- 
+
+
 async function addOneGuest() {
   const name  = document.getElementById('m-name').value.trim();
   const email = document.getElementById('m-email').value.trim();
   if (!name || !email) { toast('Enter name and email'); return; }
- 
+
   try {
     const res = await fetch('/api/import-emails', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ guests: [{ name, email }], eventId, pin: storedPin() }),
     });
- 
+
     let data;
     try {
       data = await res.json();
@@ -834,12 +834,12 @@ async function addOneGuest() {
       toast(`Server error (status ${res.status}) — check Vercel logs`);
       return;
     }
- 
+
     if (!res.ok) {
       toast(`Error: ${data.error || 'unknown error'}`);
       return;
     }
- 
+
     document.getElementById('m-name').value = '';
     document.getElementById('m-email').value = '';
     await loadGuests();
@@ -849,7 +849,7 @@ async function addOneGuest() {
     toast(`Network error: ${networkErr.message}`);
   }
 }
- 
+
 // ══ MATCHES ══
 function findMatches() {
   matches = [];
@@ -862,12 +862,12 @@ function findMatches() {
       }
     });
   });
- 
+
   document.getElementById('s-matches').textContent = matches.length;
- 
+
   const el = document.getElementById('match-list');
   if (!matches.length) { el.innerHTML = '<div class="empty">No mutual matches yet.</div>'; return; }
- 
+
   el.innerHTML = matches.map(m => {
     const ga = guests.find(g => g.id === m.a.guest_id);
     const gb = guests.find(g => g.id === m.b.guest_id);
@@ -880,10 +880,10 @@ function findMatches() {
       </div>
     </div>`;
   }).join('');
- 
+
   showEmailPanel();
 }
- 
+
 function showEmailPanel() {
   document.getElementById('email-panel').style.display = 'block';
   const recipients = buildRecipients();
@@ -891,7 +891,7 @@ function showEmailPanel() {
   if (!recipients.length) { el.textContent = 'No one has an email saved.'; return; }
   el.innerHTML = recipients.map(p => `<strong>${esc(p.name)}</strong> (${esc(p.email)}) → ${esc(p.matches.map(m=>m.name).join(', '))}`).join('<br>');
 }
- 
+
 function buildRecipients() {
   const map = {};
   matches.forEach(m => {
@@ -905,16 +905,16 @@ function buildRecipients() {
   });
   return Object.values(map).filter(p => p.matches.length);
 }
- 
+
 async function sendEmails() {
   const recipients = buildRecipients();
   if (!recipients.length) { toast('No recipients with email addresses'); return; }
- 
+
   const hostNote = document.getElementById('host-note').value.trim();
   const btn = document.getElementById('btn-send');
   const statusEl = document.getElementById('send-status');
   btn.disabled = true; statusEl.textContent = `Sending ${recipients.length} email${recipients.length!==1?'s':''}…`;
- 
+
   try {
     const res = await fetch('/api/send-matches', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -936,15 +936,18 @@ async function sendEmails() {
     statusEl.textContent = 'Network error'; statusEl.className = 'send-status err';
   } finally { btn.disabled = false; }
 }
- 
+
 // ══ QR ══
 function genQR() {
-  const url = location.href.split('#')[0];
+  // Always point guests to the stable production URL, regardless of which
+  // deployment preview URL the host happens to be viewing this page from.
+  const PRODUCTION_URL = 'https://go-glowspeedfriending.vercel.app/';
+  const url = PRODUCTION_URL;
   document.getElementById('qr-url').textContent = url;
   document.getElementById('qrcode').innerHTML = '';
   new QRCode(document.getElementById('qrcode'), { text: url, width: 172, height: 172, colorDark: '#f27db6', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
 }
- 
+
 // ══ UTILS ══
 function uid() { return Math.random().toString(36).slice(2,10); }
 function esc(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -957,4 +960,3 @@ function toast(msg) {
 </script>
 </body>
 </html>
- 
