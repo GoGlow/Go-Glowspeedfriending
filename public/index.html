@@ -40,6 +40,12 @@
   }
   .field input:focus, .field textarea:focus { border-color: var(--pink); background: var(--white); }
   .field-hint { font-size: 0.72rem; color: var(--grey-mid); margin-top: 0.3rem; line-height: 1.4; }
+  .cc-select {
+    background: var(--grey-bg); border: 1.5px solid transparent; border-radius: 10px;
+    color: var(--ink); font-family: 'Nunito', sans-serif; font-size: 0.88rem; padding: 0.7rem 0.5rem; outline: none;
+    transition: border-color 0.2s, background 0.2s; flex-shrink: 0; max-width: 110px;
+  }
+  .cc-select:focus { border-color: var(--pink); background: var(--white); }
 
   .btn { display: block; width: 100%; border: none; border-radius: 12px; cursor: pointer; font-family: 'Nunito', sans-serif; font-size: 0.95rem; font-weight: 800; padding: 0.85rem 1.5rem; text-align: center; transition: opacity 0.2s, transform 0.15s; }
   .btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
@@ -228,11 +234,18 @@
       </div>
       <div class="field">
         <label>Phone number</label>
-        <input id="p-phone" type="tel" placeholder="Optional" />
+        <div style="display:flex;gap:0.4rem">
+          <select id="p-phone-code" class="cc-select"></select>
+          <input id="p-phone-number" type="tel" placeholder="7700 900000" style="flex:1" />
+        </div>
       </div>
       <div class="field">
         <label>WhatsApp</label>
-        <input id="p-whatsapp" type="text" placeholder="Optional — number or link" />
+        <div style="display:flex;gap:0.4rem">
+          <select id="p-whatsapp-code" class="cc-select"></select>
+          <input id="p-whatsapp-number" type="tel" placeholder="7700 900000" style="flex:1" />
+        </div>
+        <div class="field-hint">If your WhatsApp is still on a number from another country, that's totally fine — just pick that country's code here, separately from your phone number above.</div>
       </div>
       <div class="field" style="margin-bottom:0.5rem">
         <label>Instagram</label>
@@ -511,6 +524,112 @@ async function selectName(guestId, wasClaimedByOther) {
   showAttScreen('profile');
 }
 
+// Common dial codes — covers the countries Go&Glow's community most often
+// comes from. Sorted by dial code length descending when matching an existing
+// number back to a country, so e.g. +1242 (Bahamas) isn't misread as +1 (US).
+const COUNTRY_CODES = [
+  { name: 'Afghanistan', code: '+93' }, { name: 'Albania', code: '+355' },
+  { name: 'Algeria', code: '+213' }, { name: 'Argentina', code: '+54' },
+  { name: 'Armenia', code: '+374' }, { name: 'Australia', code: '+61' },
+  { name: 'Austria', code: '+43' }, { name: 'Azerbaijan', code: '+994' },
+  { name: 'Bahamas', code: '+1242' }, { name: 'Bahrain', code: '+973' },
+  { name: 'Bangladesh', code: '+880' }, { name: 'Barbados', code: '+1246' },
+  { name: 'Belarus', code: '+375' }, { name: 'Belgium', code: '+32' },
+  { name: 'Belize', code: '+501' }, { name: 'Benin', code: '+229' },
+  { name: 'Bhutan', code: '+975' }, { name: 'Bolivia', code: '+591' },
+  { name: 'Bosnia and Herzegovina', code: '+387' }, { name: 'Botswana', code: '+267' },
+  { name: 'Brazil', code: '+55' }, { name: 'Brunei', code: '+673' },
+  { name: 'Bulgaria', code: '+359' }, { name: 'Burkina Faso', code: '+226' },
+  { name: 'Burundi', code: '+257' }, { name: 'Cambodia', code: '+855' },
+  { name: 'Cameroon', code: '+237' }, { name: 'Canada', code: '+1' },
+  { name: 'Chile', code: '+56' }, { name: 'China', code: '+86' },
+  { name: 'Colombia', code: '+57' }, { name: 'Costa Rica', code: '+506' },
+  { name: 'Croatia', code: '+385' }, { name: 'Cuba', code: '+53' },
+  { name: 'Cyprus', code: '+357' }, { name: 'Czech Republic', code: '+420' },
+  { name: 'Denmark', code: '+45' }, { name: 'Dominican Republic', code: '+1809' },
+  { name: 'Ecuador', code: '+593' }, { name: 'Egypt', code: '+20' },
+  { name: 'El Salvador', code: '+503' }, { name: 'Estonia', code: '+372' },
+  { name: 'Ethiopia', code: '+251' }, { name: 'Fiji', code: '+679' },
+  { name: 'Finland', code: '+358' }, { name: 'France', code: '+33' },
+  { name: 'Gabon', code: '+241' }, { name: 'Gambia', code: '+220' },
+  { name: 'Georgia', code: '+995' }, { name: 'Germany', code: '+49' },
+  { name: 'Ghana', code: '+233' }, { name: 'Greece', code: '+30' },
+  { name: 'Guatemala', code: '+502' }, { name: 'Guyana', code: '+592' },
+  { name: 'Haiti', code: '+509' }, { name: 'Honduras', code: '+504' },
+  { name: 'Hong Kong', code: '+852' }, { name: 'Hungary', code: '+36' },
+  { name: 'Iceland', code: '+354' }, { name: 'India', code: '+91' },
+  { name: 'Indonesia', code: '+62' }, { name: 'Iran', code: '+98' },
+  { name: 'Iraq', code: '+964' }, { name: 'Ireland', code: '+353' },
+  { name: 'Israel', code: '+972' }, { name: 'Italy', code: '+39' },
+  { name: 'Ivory Coast', code: '+225' }, { name: 'Jamaica', code: '+1876' },
+  { name: 'Japan', code: '+81' }, { name: 'Jordan', code: '+962' },
+  { name: 'Kazakhstan', code: '+7' }, { name: 'Kenya', code: '+254' },
+  { name: 'Kuwait', code: '+965' }, { name: 'Kyrgyzstan', code: '+996' },
+  { name: 'Laos', code: '+856' }, { name: 'Latvia', code: '+371' },
+  { name: 'Lebanon', code: '+961' }, { name: 'Lesotho', code: '+266' },
+  { name: 'Liberia', code: '+231' }, { name: 'Libya', code: '+218' },
+  { name: 'Lithuania', code: '+370' }, { name: 'Luxembourg', code: '+352' },
+  { name: 'Macau', code: '+853' }, { name: 'Madagascar', code: '+261' },
+  { name: 'Malawi', code: '+265' }, { name: 'Malaysia', code: '+60' },
+  { name: 'Maldives', code: '+960' }, { name: 'Mali', code: '+223' },
+  { name: 'Malta', code: '+356' }, { name: 'Mauritius', code: '+230' },
+  { name: 'Mexico', code: '+52' }, { name: 'Moldova', code: '+373' },
+  { name: 'Mongolia', code: '+976' }, { name: 'Montenegro', code: '+382' },
+  { name: 'Morocco', code: '+212' }, { name: 'Mozambique', code: '+258' },
+  { name: 'Myanmar', code: '+95' }, { name: 'Namibia', code: '+264' },
+  { name: 'Nepal', code: '+977' }, { name: 'Netherlands', code: '+31' },
+  { name: 'New Zealand', code: '+64' }, { name: 'Nicaragua', code: '+505' },
+  { name: 'Niger', code: '+227' }, { name: 'Nigeria', code: '+234' },
+  { name: 'North Korea', code: '+850' }, { name: 'North Macedonia', code: '+389' },
+  { name: 'Norway', code: '+47' }, { name: 'Oman', code: '+968' },
+  { name: 'Pakistan', code: '+92' }, { name: 'Palestine', code: '+970' },
+  { name: 'Panama', code: '+507' }, { name: 'Papua New Guinea', code: '+675' },
+  { name: 'Paraguay', code: '+595' }, { name: 'Peru', code: '+51' },
+  { name: 'Philippines', code: '+63' }, { name: 'Poland', code: '+48' },
+  { name: 'Portugal', code: '+351' }, { name: 'Qatar', code: '+974' },
+  { name: 'Romania', code: '+40' }, { name: 'Russia', code: '+7' },
+  { name: 'Rwanda', code: '+250' }, { name: 'Saudi Arabia', code: '+966' },
+  { name: 'Senegal', code: '+221' }, { name: 'Serbia', code: '+381' },
+  { name: 'Sierra Leone', code: '+232' }, { name: 'Singapore', code: '+65' },
+  { name: 'Slovakia', code: '+421' }, { name: 'Slovenia', code: '+386' },
+  { name: 'Somalia', code: '+252' }, { name: 'South Africa', code: '+27' },
+  { name: 'South Korea', code: '+82' }, { name: 'South Sudan', code: '+211' },
+  { name: 'Spain', code: '+34' }, { name: 'Sri Lanka', code: '+94' },
+  { name: 'Sudan', code: '+249' }, { name: 'Sweden', code: '+46' },
+  { name: 'Switzerland', code: '+41' }, { name: 'Syria', code: '+963' },
+  { name: 'Taiwan', code: '+886' }, { name: 'Tajikistan', code: '+992' },
+  { name: 'Tanzania', code: '+255' }, { name: 'Thailand', code: '+66' },
+  { name: 'Togo', code: '+228' }, { name: 'Trinidad and Tobago', code: '+1868' },
+  { name: 'Tunisia', code: '+216' }, { name: 'Turkey', code: '+90' },
+  { name: 'Turkmenistan', code: '+993' }, { name: 'Uganda', code: '+256' },
+  { name: 'Ukraine', code: '+380' }, { name: 'United Arab Emirates', code: '+971' },
+  { name: 'United Kingdom', code: '+44' }, { name: 'United States', code: '+1' },
+  { name: 'Uruguay', code: '+598' }, { name: 'Uzbekistan', code: '+998' },
+  { name: 'Venezuela', code: '+58' }, { name: 'Vietnam', code: '+84' },
+  { name: 'Yemen', code: '+967' }, { name: 'Zambia', code: '+260' },
+  { name: 'Zimbabwe', code: '+263' },
+];
+
+function populateCountrySelect(selectEl) {
+  selectEl.innerHTML = COUNTRY_CODES
+    .map(c => `<option value="${c.code}">${c.code} ${c.name}</option>`)
+    .join('');
+}
+
+// Splits a stored "+44 7700900000"-style value back into a dial code the
+// dropdown recognises and the remaining local number, for editing.
+function splitPhoneValue(value) {
+  if (!value) return { code: '+44', number: '' };
+  const stripped = value.trim();
+  const sorted = [...COUNTRY_CODES].sort((a, b) => b.code.length - a.code.length);
+  for (const c of sorted) {
+    if (stripped.startsWith(c.code)) {
+      return { code: c.code, number: stripped.slice(c.code.length).trim() };
+    }
+  }
+  return { code: '+44', number: stripped }; // fallback if no known code matched
+}
+
 function buildProfileScreen(g) {
   // Best-effort split of the existing name into first/last for editing —
   // guests can freely adjust either field regardless of how it was imported.
@@ -518,9 +637,18 @@ function buildProfileScreen(g) {
   document.getElementById('p-first').value    = parts[0] || '';
   document.getElementById('p-last').value     = parts.slice(1).join(' ') || '';
   document.getElementById('p-email').value    = g.email || '';
-  document.getElementById('p-phone').value    = g.phone || '';
-  document.getElementById('p-whatsapp').value = g.whatsapp || '';
   document.getElementById('p-insta').value    = g.insta || '';
+
+  populateCountrySelect(document.getElementById('p-phone-code'));
+  populateCountrySelect(document.getElementById('p-whatsapp-code'));
+
+  const phoneParts    = splitPhoneValue(g.phone);
+  const whatsappParts = splitPhoneValue(g.whatsapp);
+  document.getElementById('p-phone-code').value    = phoneParts.code;
+  document.getElementById('p-phone-number').value  = phoneParts.number;
+  document.getElementById('p-whatsapp-code').value    = whatsappParts.code;
+  document.getElementById('p-whatsapp-number').value  = whatsappParts.number;
+
   document.getElementById('profile-error').textContent = '';
 }
 
@@ -528,11 +656,42 @@ async function submitProfile() {
   const first    = document.getElementById('p-first').value.trim();
   const last     = document.getElementById('p-last').value.trim();
   const email    = document.getElementById('p-email').value.trim();
-  const phone    = document.getElementById('p-phone').value.trim();
-  const whatsapp = document.getElementById('p-whatsapp').value.trim();
   const insta    = document.getElementById('p-insta').value.trim();
   const errorEl  = document.getElementById('profile-error');
   errorEl.textContent = '';
+
+  // Combine the dropdown's dial code with the typed local number. People
+  // often type their local number with a leading 0 out of habit (e.g. "07700
+  // 900000") — that 0 shouldn't be there once a country code is prepended,
+  // so strip a single leading zero before combining.
+  function combinePhone(codeSelectId, numberInputId) {
+    const code = document.getElementById(codeSelectId).value;
+    const rawNumber = document.getElementById(numberInputId).value.trim();
+    if (!rawNumber) return '';
+    const cleaned = rawNumber.replace(/^0+/, '');
+    return cleaned ? `${code} ${cleaned}` : '';
+  }
+
+  const phone    = combinePhone('p-phone-code', 'p-phone-number');
+  const whatsapp = combinePhone('p-whatsapp-code', 'p-whatsapp-number');
+
+  // Phone/WhatsApp are optional, but if someone DOES fill one in, it should
+  // actually be usable — validate the combined result has a real, plausible
+  // number of digits after the country code.
+  const phoneLooksValid = (val) => {
+    if (!val) return true; // empty is fine, it's optional
+    const stripped = val.replace(/[\s\-()]/g, '');
+    return /^\+\d{8,15}$/.test(stripped);
+  };
+
+  if (!phoneLooksValid(phone)) {
+    errorEl.textContent = 'That phone number doesn\'t look right — double check the digits after your country code.';
+    return;
+  }
+  if (!phoneLooksValid(whatsapp)) {
+    errorEl.textContent = 'That WhatsApp number doesn\'t look right — double check the digits after the country code.';
+    return;
+  }
 
   const name = [first, last].filter(Boolean).join(' ').trim() || myGuest.name;
 
