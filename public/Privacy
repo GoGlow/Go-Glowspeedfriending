@@ -32,21 +32,22 @@
 </style>
 </head>
 <body>
- 
+
 <nav class="nav"><span class="nav-logo">Go&Glow</span></nav>
- 
+
 <div class="page">
   <h1>Privacy Policy</h1>
   <div class="updated">Last updated: July 2026</div>
- 
+
   <div class="card">
     <p>This policy explains what personal data Go&Glow collects when you attend one of our events or use our speed friending app, why we collect it, who we share it with, and what rights you have over it.</p>
     <p>If anything here isn't clear, or you'd like to exercise any of your rights, just email us at <a href="mailto:goxglowedi@gmail.com">goxglowedi@gmail.com</a> — we'll always try to help in plain English rather than legal jargon.</p>
   </div>
- 
+
   <h2>Who we are</h2>
   <p>Go&Glow organises social, creative, and wellness events for women, including speed friending events. For the purposes of data protection law, Go&Glow is the "data controller" for the personal data described in this policy — meaning we decide what data is collected and why.</p>
- 
+  <p>This policy covers the speed friending app specifically. For how we handle your data more generally — including ticket bookings, photography at events, and marketing communications — see our main <a href="https://www.goandglow.org/privacy-policy" target="_blank" rel="noopener">Go&amp;Glow Privacy Policy</a>.</p>
+
   <h2>What we collect, and why</h2>
   <table>
     <tr><th>Data</th><th>Where it comes from</th><th>Why we have it</th></tr>
@@ -54,22 +55,22 @@
     <tr><td>Phone, WhatsApp, Instagram</td><td>You choose to add these yourself, if you want to</td><td>So a mutual match can get in touch with you afterwards — entirely optional</td></tr>
     <tr><td>Who you'd like to stay in touch with</td><td>Your own selections during the event</td><td>To work out mutual matches</td></tr>
   </table>
- 
+
   <p>You're never required to fill in your phone number, WhatsApp, or Instagram — you can leave any of these blank and still take part fully.</p>
- 
+
   <h2>Who sees what</h2>
   <div class="callout">
     <strong>The short version:</strong> your details are only ever shown to someone if you <em>both</em> pick each other. One-sided picks are never revealed to anyone, including the other person.
   </div>
   <p>Other attendees at the same event can see your name and (if you've added one) your Instagram handle while the event is running, so people can recognise each other. Your email and phone number are never shown to other attendees during the event itself.</p>
   <p>If you and another attendee both indicate you'd like to stay in touch, we send each of you an email containing only the contact details the <em>other</em> person chose to share (name, and whichever of email/phone/WhatsApp/Instagram they filled in). We never send you anyone else's details unless that match is genuinely mutual.</p>
- 
+
   <h2>How long we keep your data</h2>
   <ul>
     <li><strong>Guest list and picks:</strong> typically cleared by the event host after each event, and not used for anything beyond that event.</li>
     <li><strong>Mutual matches only:</strong> where a match is made, we keep a record of that match (names, and whichever contact details were shared) for <strong>6 months</strong>, after which it's automatically and permanently deleted. We keep this only so that, in the rare case something goes wrong after an event, we can look into it — this record is locked down and not accessible through the app itself.</li>
   </ul>
- 
+
   <h2>Who we share data with</h2>
   <p>We use a small number of trusted service providers to run the app and send emails. They only process data on our instructions, and don't use it for their own purposes:</p>
   <ul>
@@ -78,7 +79,7 @@
     <li><strong>Ticket Tailor</strong> — handles your original ticket purchase (Ticket Tailor is a separate data controller for that transaction — see their own privacy policy for details)</li>
   </ul>
   <p>We do not sell your data, and we do not share your details with event sponsors or venues unless you've separately and explicitly agreed to that as part of a specific promotion.</p>
- 
+
   <h2>Your rights</h2>
   <p>Under UK GDPR, you have the right to:</p>
   <ul>
@@ -88,13 +89,12 @@
     <li>Object to how we're using it</li>
   </ul>
   <p>To exercise any of these, email <a href="mailto:goxglowedi@gmail.com">goxglowedi@gmail.com</a>. If you're not satisfied with our response, you can complain to the UK's data protection regulator, the <a href="https://ico.org.uk" target="_blank" rel="noopener">Information Commissioner's Office (ICO)</a>.</p>
- 
+
   <h2>Changes to this policy</h2>
   <p>If we make significant changes to how we handle your data, we'll update this page and, where appropriate, let attendees know directly.</p>
- 
+
   <a class="back-link" href="/">← Back to the app</a>
 </div>
- 
+
 </body>
 </html>
- 
