@@ -1,7 +1,8 @@
 // api/send-matches.js
-// Sends each recipient an email listing only their own mutual matches, via Resend.
-// Requires the host PIN. Returns a per-recipient result so the host can see exactly
-// which emails succeeded and, for any that failed, why.
+// Sends each recipient an email listing only their own mutual matches, via Mailjet.
+// Requires the host PIN. Uses Mailjet's batch send (all emails in one API call),
+// then maps the per-message results back so the host still sees an accurate
+// per-recipient success/failure count.
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
@@ -16,28 +17,28 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'No recipients provided' });
   }
 
-  const RESEND_API_KEY = process.env.RESEND_API_KEY;
-  if (!RESEND_API_KEY) {
-    return res.status(500).json({ error: 'RESEND_API_KEY is not set in Vercel environment variables' });
+  const MAILJET_API_KEY    = process.env.MAILJET_API_KEY;
+  const MAILJET_SECRET_KEY = process.env.MAILJET_SECRET_KEY;
+
+  if (!MAILJET_API_KEY || !MAILJET_SECRET_KEY) {
+    return res.status(500).json({ error: 'MAILJET_API_KEY / MAILJET_SECRET_KEY not set in Vercel environment variables' });
   }
 
-  // Resend only allows sending from this exact address until a custom domain
-  // is verified — any other @resend.dev address (or unverified domain) will
-  // be rejected. This is intentionally NOT configurable via the UI to avoid
-  // this exact failure mode; once a real domain is verified in Resend, update
-  // this constant (or wire it back to a verified fromEmail from cfg).
-  const VERIFIED_SENDER = 'onboarding@resend.dev';
-  const senderName = fromName || 'Go&Glow';
-  const senderEmail = (fromEmail && fromEmail !== 'hello@resend.dev') ? fromEmail : VERIFIED_SENDER;
+  const senderName  = fromName  || 'Go&Glow';
+  const senderEmail = fromEmail || 'hello@goandglow.org';
 
-  const results = [];
+  const validRecipients = [];
+  const skipped = [];
 
-  for (const person of recipients) {
+  recipients.forEach(person => {
     if (!person.email) {
-      results.push({ email: person.name || '(no email)', ok: false, error: 'No email address on file' });
-      continue;
+      skipped.push({ email: person.name || '(no email)', ok: false, error: 'No email address on file' });
+      return;
     }
+    validRecipients.push(person);
+  });
 
+  const messages = validRecipients.map(person => {
     const matchListHtml = (person.matches || []).map(m => `
       <div style="background:#fce8f2;border:1.5px solid #fad4e8;border-radius:12px;padding:0.9rem 1.1rem;margin-bottom:0.6rem;">
         <div style="font-weight:800;font-size:0.95rem;color:#2a2a2a;margin-bottom:0.35rem;">${escapeHtml(m.name || '?')}</div>
@@ -64,30 +65,54 @@ export default async function handler(req, res) {
       </div>
     `;
 
+    return {
+      From: { Email: senderEmail, Name: senderName },
+      To: [{ Email: person.email, Name: person.name || undefined }],
+      Subject: `Your matches from ${eventName || 'Go&Glow'} ✨`,
+      HTMLPart: html,
+    };
+  });
+
+  let results = [...skipped];
+
+  if (messages.length) {
     try {
-      const resendRes = await fetch('https://api.resend.com/emails', {
+      const auth = Buffer.from(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`).toString('base64');
+
+      const mjRes = await fetch('https://api.mailjet.com/v3.1/send', {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${RESEND_API_KEY}`,
+          Authorization: `Basic ${auth}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          from: `${senderName} <${senderEmail}>`,
-          to: person.email,
-          subject: `Your matches from ${eventName || 'Go&Glow'} ✨`,
-          html,
-        }),
+        body: JSON.stringify({ Messages: messages }),
       });
 
-      const data = await resendRes.json();
+      const data = await mjRes.json();
 
-      if (!resendRes.ok) {
-        results.push({ email: person.email, ok: false, error: data.message || JSON.stringify(data) });
+      if (!mjRes.ok) {
+        const errMsg = data.ErrorMessage || JSON.stringify(data);
+        validRecipients.forEach(person => {
+          results.push({ email: person.email, ok: false, error: errMsg });
+        });
       } else {
-        results.push({ email: person.email, ok: true });
+        (data.Messages || []).forEach((msgResult, i) => {
+          const person = validRecipients[i];
+          if (msgResult.Status === 'success') {
+            results.push({ email: person.email, ok: true });
+          } else {
+            const errDetail = (msgResult.Errors || [])
+              .map(e => e.ErrorMessage)
+              .filter(Boolean)
+              .join('; ') || msgResult.Status;
+            results.push({ email: person.email, ok: false, error: errDetail });
+          }
+        });
       }
     } catch (e) {
-      results.push({ email: person.email, ok: false, error: e.message });
+      validRecipients.forEach(person => {
+        results.push({ email: person.email, ok: false, error: e.message });
+      });
     }
   }
 
