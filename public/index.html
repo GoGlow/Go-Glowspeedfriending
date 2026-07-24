@@ -247,9 +247,20 @@
         </div>
         <div class="field-hint">If your WhatsApp is still on a number from another country, that's totally fine — just pick that country's code here, separately from your phone number above.</div>
       </div>
-      <div class="field" style="margin-bottom:0.5rem">
+      <div class="field">
         <label>Instagram</label>
         <input id="p-insta" type="text" placeholder="Optional — @handle" />
+      </div>
+      <div class="field" style="margin-bottom:0.5rem">
+        <label>Add a selfie</label>
+        <div style="display:flex;align-items:center;gap:0.75rem">
+          <div id="photo-preview" style="width:52px;height:52px;border-radius:50%;background:var(--pink-pale);flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:1.3rem">🤳</div>
+          <label for="p-photo-input" style="flex:1;background:var(--grey-bg);border-radius:10px;padding:0.6rem 0.9rem;font-size:0.82rem;color:var(--grey-mid);text-align:center;cursor:pointer;font-weight:700">
+            <span id="photo-btn-label">Choose a photo</span>
+          </label>
+          <input id="p-photo-input" type="file" accept="image/*" capture="user" style="display:none" onchange="handlePhotoSelect(event)" />
+        </div>
+        <div class="field-hint" id="photo-status">Optional — helps people recognise you later when they're ticking, especially by the end of the night when names blur together.</div>
       </div>
       <div class="pin-error" id="profile-error" style="text-align:left"></div>
       <button class="btn btn-pink" onclick="submitProfile()">Continue</button>
@@ -266,8 +277,23 @@
       <p class="tick-sub">Tick anyone you'd love to stay in touch with. Only mutual matches see each other's details.</p>
     </div>
     <div class="tick-count"><strong id="tick-n">0</strong> selected</div>
+    <input class="ns-search" id="tick-search" type="text" placeholder="Search a name…" oninput="filterTickRows()" style="margin-bottom:0.7rem" />
     <div class="tick-list" id="tick-list"></div>
-    <button class="btn btn-pink" onclick="attSubmit()" id="btn-submit">Submit my choices</button>
+    <button class="btn btn-pink" onclick="showConfirmScreen()" id="btn-submit">Submit my choices</button>
+  </div>
+
+  <!-- Confirm before submitting -->
+  <div id="att-confirm" class="page" style="display:none">
+    <div class="ns-wrap">
+      <span class="ns-glyph">👀</span>
+      <h1 class="ns-title">Quick check before you submit</h1>
+      <p class="ns-sub">You've picked <strong id="confirm-count" style="color:var(--pink)">0</strong> — take a second to make sure these are actually the right people, especially if anyone shares a first name with someone else tonight.</p>
+    </div>
+    <div class="card" style="margin-bottom:1rem">
+      <div id="confirm-list"></div>
+    </div>
+    <button class="btn btn-pink" onclick="attSubmit()" style="margin-bottom:0.6rem">Yes, that's right — submit</button>
+    <button class="btn btn-ghost" onclick="showAttScreen('tick')">← Go back and check again</button>
   </div>
 
   <!-- Done -->
@@ -466,18 +492,37 @@ async function initApp() {
 }
 
 // ══ NAME SELECT (replaces login) ══
+// Returns a Set of first names that appear more than once in the guest list —
+// used to visually flag "there's more than one Grace tonight" wherever names
+// are shown, since that's the exact mix-up that caused a real mismatch.
+function getDuplicateFirstNames(list) {
+  const counts = {};
+  list.forEach(g => {
+    const first = (g.name || '').trim().split(/\s+/)[0]?.toLowerCase();
+    if (!first) return;
+    counts[first] = (counts[first] || 0) + 1;
+  });
+  return new Set(Object.keys(counts).filter(k => counts[k] > 1));
+}
+
 function buildNameSelect() {
   const list = document.getElementById('ns-list');
   if (!guests.length) {
     list.innerHTML = '<div class="empty">No guest list loaded yet — check with your host.</div>';
     return;
   }
+  const dupFirstNames = getDuplicateFirstNames(guests);
   list.innerHTML = guests.map(g => {
     const isClaimedByOther = g.claimed_by && g.claimed_by !== deviceToken;
+    const parts = g.name.trim().split(/\s+/);
+    const isDup = dupFirstNames.has(parts[0].toLowerCase());
+    const nameHtml = isDup
+      ? `${esc(parts[0])} <strong style="color:var(--pink-deep)">${esc(parts.slice(1).join(' '))}</strong>`
+      : esc(g.name);
     return `<div class="ns-row ${isClaimedByOther ? 'claimed' : ''}" data-id="${g.id}" data-name="${esc(g.name.toLowerCase())}"
                  onclick="selectName('${g.id}', ${isClaimedByOther ? 'true' : 'false'})">
       <div class="ns-av">${g.name[0].toUpperCase()}</div>
-      <div class="ns-name">${esc(g.name)}</div>
+      <div><div class="ns-name">${nameHtml}</div>${isDup ? `<div class="ns-claimed-tag" style="color:var(--pink-deep);font-style:normal;margin-left:0">⚠️ more than one ${esc(parts[0])} tonight — check the surname</div>` : ''}</div>
       ${isClaimedByOther ? '<div class="ns-claimed-tag">tap if this is you</div>' : ''}
     </div>`;
   }).join('');
@@ -650,6 +695,82 @@ function buildProfileScreen(g) {
   document.getElementById('p-whatsapp-number').value  = whatsappParts.number;
 
   document.getElementById('profile-error').textContent = '';
+
+  // Reset any pending photo selection from a previous name (in case this
+  // device is being reused, e.g. after the claimed-name recovery flow)
+  pendingPhotoBlob = null;
+  document.getElementById('photo-btn-label').textContent = 'Choose a photo';
+  const existingPreview = document.getElementById('photo-preview');
+  if (g.photo_url) {
+    existingPreview.innerHTML = `<img src="${esc(g.photo_url)}" style="width:100%;height:100%;object-fit:cover" />`;
+  } else {
+    existingPreview.innerHTML = '🤳';
+  }
+}
+
+let pendingPhotoBlob = null; // holds the compressed image until Continue is pressed
+
+// Compresses the selected photo client-side before upload — phone camera
+// photos can easily be 5-10MB, which would be slow or fail entirely on
+// patchy venue wifi. Resizing to a sensible max dimension and re-encoding
+// as JPEG at moderate quality keeps this small and fast regardless of the
+// original photo's size.
+function handlePhotoSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const statusEl = document.getElementById('photo-status');
+  statusEl.textContent = 'Processing photo…';
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX_DIM = 480; // plenty for a small circular thumbnail, keeps file size low
+      let { width, height } = img;
+      if (width > height && width > MAX_DIM) {
+        height = Math.round(height * (MAX_DIM / width));
+        width = MAX_DIM;
+      } else if (height > MAX_DIM) {
+        width = Math.round(width * (MAX_DIM / height));
+        height = MAX_DIM;
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+
+      canvas.toBlob((blob) => {
+        pendingPhotoBlob = blob;
+        document.getElementById('photo-preview').innerHTML =
+          `<img src="${URL.createObjectURL(blob)}" style="width:100%;height:100%;object-fit:cover" />`;
+        document.getElementById('photo-btn-label').textContent = 'Change photo';
+        statusEl.textContent = `Ready to upload (${Math.round(blob.size / 1024)}KB) — helps people recognise you later.`;
+      }, 'image/jpeg', 0.8);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// Uploads the compressed photo to Supabase Storage and returns its public
+// URL, or null if there was nothing to upload or the upload failed. This is
+// treated as best-effort — a failed photo upload should never block the
+// rest of the profile (name/email/etc.) from saving.
+async function uploadPendingPhoto(guestId) {
+  if (!pendingPhotoBlob || !sb) return null;
+  try {
+    const path = `${guestId}.jpg`;
+    const { error } = await sb.storage
+      .from('guest-photos')
+      .upload(path, pendingPhotoBlob, { upsert: true, contentType: 'image/jpeg' });
+    if (error) return null;
+    const { data } = sb.storage.from('guest-photos').getPublicUrl(path);
+    return data?.publicUrl || null;
+  } catch (e) {
+    return null;
+  }
 }
 
 async function submitProfile() {
@@ -717,9 +838,23 @@ async function submitProfile() {
     }
   }
 
+  // Photo upload is genuinely best-effort — if it fails (bad connection, etc.)
+  // that should never stop the guest from proceeding, since it's the one
+  // truly optional extra on this whole screen.
+  let photoUrl = myGuest.photo_url || null;
+  if (pendingPhotoBlob) {
+    const uploadedUrl = await uploadPendingPhoto(myGuest.id);
+    if (uploadedUrl) {
+      photoUrl = uploadedUrl;
+      if (sb) {
+        sb.from('guests').update({ photo_url: uploadedUrl }).eq('id', myGuest.id).then(() => {});
+      }
+    }
+  }
+
   // Reflect the edit locally so match cards / lists show it immediately
   // without waiting for a full reload
-  Object.assign(myGuest, { name, email: email || myGuest.email, phone, whatsapp, insta });
+  Object.assign(myGuest, { name, email: email || myGuest.email, phone, whatsapp, insta, photo_url: photoUrl });
   const idx = guests.findIndex(x => x.id === myGuest.id);
   if (idx !== -1) guests[idx] = myGuest;
 
@@ -736,19 +871,40 @@ function queueClaim(guestId) {
 
 // ══ TICK SHEET ══
 function buildTickList(preSelected) {
-  const others = guests.filter(g => g.id !== myGuest.id);
+  // Only show people who've actually opened the app and claimed their name —
+  // this is a genuine "they're here" signal, unlike just being on the
+  // imported ticket list. Someone who bought a ticket but never showed up
+  // (and never opened the app) simply won't appear as an option to tick,
+  // which is exactly what prevents the "wrong Grace" mix-up from happening.
+  const present = guests.filter(g => g.claimed_by);
+  const others = present.filter(g => g.id !== myGuest.id);
   const el = document.getElementById('tick-list');
   if (!others.length) {
-    el.innerHTML = '<div class="empty" style="margin-bottom:1rem">No other guests yet — check back in a moment.</div>';
+    el.innerHTML = '<div class="empty" style="margin-bottom:1rem">No one else has joined yet — check back in a moment as more people open the app.</div>';
     return;
   }
-  el.innerHTML = others.map(g => `
-    <div class="tick-row ${preSelected.includes(g.id) ? 'on' : ''}" data-id="${g.id}" onclick="toggleTick(this)">
+  const dupFirstNames = getDuplicateFirstNames(present);
+  el.innerHTML = others.map(g => {
+    const parts = g.name.trim().split(/\s+/);
+    const isDup = dupFirstNames.has(parts[0].toLowerCase());
+    const nameHtml = isDup
+      ? `${esc(parts[0])} <strong style="color:var(--pink-deep)">${esc(parts.slice(1).join(' '))}</strong>`
+      : esc(g.name);
+    return `
+    <div class="tick-row ${preSelected.includes(g.id) ? 'on' : ''}" data-id="${g.id}" data-name="${esc(g.name.toLowerCase())}" onclick="toggleTick(this)">
       <div class="t-box"><span class="t-check">✓</span></div>
-      <div class="t-av">${g.name[0].toUpperCase()}</div>
-      <div><div class="t-name">${esc(g.name)}</div>${g.insta ? `<div class="t-insta">${esc(g.insta)}</div>` : ''}</div>
-    </div>`).join('');
+      <div class="t-av" style="${g.photo_url ? 'padding:0;overflow:hidden' : ''}">${g.photo_url ? `<img src="${esc(g.photo_url)}" style="width:100%;height:100%;object-fit:cover" />` : g.name[0].toUpperCase()}</div>
+      <div><div class="t-name">${nameHtml}</div>${isDup ? `<div style="font-size:0.62rem;color:var(--pink-deep);font-weight:700">⚠️ check the surname — more than one ${esc(parts[0])} tonight</div>` : ''}${g.insta ? `<div class="t-insta">${esc(g.insta)}</div>` : ''}</div>
+    </div>`;
+  }).join('');
   updateTickN();
+}
+
+function filterTickRows() {
+  const q = document.getElementById('tick-search').value.toLowerCase();
+  document.querySelectorAll('.tick-row').forEach(row => {
+    row.style.display = row.dataset.name.includes(q) ? 'flex' : 'none';
+  });
 }
 
 function toggleTick(el) {
@@ -820,6 +976,33 @@ function setSyncState(state) {
 }
 
 // ══ SUBMIT ══
+function showConfirmScreen() {
+  const selectedIds = getSelectedIds();
+  const selectedGuests = guests.filter(g => selectedIds.includes(g.id));
+
+  document.getElementById('confirm-count').textContent =
+    `${selectedGuests.length} ${selectedGuests.length === 1 ? 'person' : 'people'}`;
+
+  const dupFirstNames = getDuplicateFirstNames(guests.filter(g => g.claimed_by));
+  const listEl = document.getElementById('confirm-list');
+
+  if (!selectedGuests.length) {
+    listEl.innerHTML = '<div class="empty">You haven\'t ticked anyone — go back if that\'s not right.</div>';
+  } else {
+    listEl.innerHTML = selectedGuests.map(g => {
+      const parts = g.name.trim().split(/\s+/);
+      const isDup = dupFirstNames.has(parts[0].toLowerCase());
+      return `<div style="display:flex;align-items:center;gap:0.6rem;padding:0.5rem 0;border-bottom:1px solid var(--grey-light)">
+        <div class="t-av" style="width:28px;height:28px;font-size:0.75rem;${g.photo_url ? 'padding:0;overflow:hidden' : ''}">${g.photo_url ? `<img src="${esc(g.photo_url)}" style="width:100%;height:100%;object-fit:cover" />` : g.name[0].toUpperCase()}</div>
+        <div style="font-weight:700;font-size:0.85rem">${esc(g.name)}</div>
+        ${isDup ? `<span style="font-size:0.65rem;color:var(--pink-deep);font-weight:700;margin-left:auto">⚠️ double check</span>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  showAttScreen('confirm');
+}
+
 async function attSubmit() {
   const selected = getSelectedIds();
   saveDraft({ guestId: myGuest.id, selectedIds: selected, submitted: true });
@@ -832,6 +1015,7 @@ function showAttScreen(v) {
   document.getElementById('ns-select').style.display  = v === 'select'  ? 'block' : 'none';
   document.getElementById('att-profile').style.display = v === 'profile' ? 'block' : 'none';
   document.getElementById('att-tick').style.display   = v === 'tick'    ? 'block' : 'none';
+  document.getElementById('att-confirm').style.display = v === 'confirm' ? 'block' : 'none';
   document.getElementById('att-done').style.display    = v === 'done'    ? 'block' : 'none';
 }
 
@@ -852,7 +1036,17 @@ function setupRT() {
   if (!sb) return;
   if (rtChannel) sb.removeChannel(rtChannel);
   rtChannel = sb.channel('gg-rt-' + eventId)
-    .on('postgres_changes', { event:'*', schema:'public', table:'guests',      filter:`event_id=eq.${eventId}` }, async () => { await loadGuests(); if (!myGuest) buildNameSelect(); refreshHostDash(); })
+    .on('postgres_changes', { event:'*', schema:'public', table:'guests', filter:`event_id=eq.${eventId}` }, async () => {
+      await loadGuests();
+      if (!myGuest) {
+        buildNameSelect();
+      } else if (document.getElementById('att-tick').style.display !== 'none') {
+        // Someone new just joined mid-event — refresh the tick list to
+        // include them, without losing whatever this guest has already ticked.
+        buildTickList(getSelectedIds());
+      }
+      refreshHostDash();
+    })
     .on('postgres_changes', { event:'*', schema:'public', table:'submissions', filter:`event_id=eq.${eventId}` }, async () => { await loadSubs(); refreshHostDash(); })
     .subscribe();
 }
@@ -988,7 +1182,14 @@ async function importEmails() {
     document.getElementById('import-csv').value = '';
     await loadGuests();
     refreshHostDash();
-    toast(`${data.imported} guests imported ✓`);
+
+    const dupNames = getDuplicateFirstNames(guests);
+    if (dupNames.size) {
+      const list = [...dupNames].map(n => n[0].toUpperCase() + n.slice(1)).join(', ');
+      statusEl.textContent += ` — ⚠️ duplicate first names: ${list}. Worth mentioning to guests on the night so they double-check surnames.`;
+    } else {
+      toast(`${data.imported} guests imported ✓`);
+    }
   } catch (networkErr) {
     statusEl.textContent = `Network error: ${networkErr.message}`;
   }
@@ -1208,10 +1409,19 @@ function findMatches() {
     const ga = guests.find(g => g.id === m.a.guest_id);
     const gb = guests.find(g => g.id === m.b.guest_id);
     const na = ga?.name || '?', nb = gb?.name || '?';
+    const avatarHtml = (g, name) => g?.photo_url
+      ? `<div style="width:26px;height:26px;border-radius:50%;overflow:hidden;flex-shrink:0"><img src="${esc(g.photo_url)}" style="width:100%;height:100%;object-fit:cover" /></div>`
+      : `<div style="width:26px;height:26px;border-radius:50%;background:var(--pink-pale);color:var(--pink);font-weight:800;font-size:0.7rem;display:flex;align-items:center;justify-content:center;flex-shrink:0">${name[0]?.toUpperCase()||'?'}</div>`;
     return `<div class="match-card">
       <div class="match-heart">♡</div>
-      <div>
-        <div class="match-names">${esc(na)} & ${esc(nb)}</div>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.22rem">
+          ${avatarHtml(ga, na)}
+          <div class="match-names" style="margin-bottom:0">${esc(na)}</div>
+          <span style="color:var(--grey-mid);font-size:0.8rem">&</span>
+          ${avatarHtml(gb, nb)}
+          <div class="match-names" style="margin-bottom:0">${esc(nb)}</div>
+        </div>
         <div class="match-det">${esc(na)}: ${esc([ga?.email,ga?.phone,ga?.whatsapp,ga?.insta].filter(Boolean).join(' · ')||'—')}<br>${esc(nb)}: ${esc([gb?.email,gb?.phone,gb?.whatsapp,gb?.insta].filter(Boolean).join(' · ')||'—')}</div>
       </div>
     </div>`;
@@ -1260,7 +1470,7 @@ function buildRecipients() {
       const go = guests.find(g => g.id === other.guest_id);
       if (!gs?.email) return;
       if (!map[side.guest_id]) map[side.guest_id] = { name: gs.name, email: gs.email, matches: [] };
-      map[side.guest_id].matches.push({ name: go?.name||'?', email: go?.email||'', phone: go?.phone||'', whatsapp: go?.whatsapp||'', insta: go?.insta||'' });
+      map[side.guest_id].matches.push({ name: go?.name||'?', email: go?.email||'', phone: go?.phone||'', whatsapp: go?.whatsapp||'', insta: go?.insta||'', photoUrl: go?.photo_url||'' });
     });
   });
   return Object.values(map).filter(p => p.matches.length);
