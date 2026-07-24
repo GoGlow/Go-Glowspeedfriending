@@ -41,7 +41,10 @@ export default async function handler(req, res) {
   const messages = validRecipients.map(person => {
     const matchListHtml = (person.matches || []).map(m => `
       <div style="background:#fce8f2;border:1.5px solid #fad4e8;border-radius:12px;padding:0.9rem 1.1rem;margin-bottom:0.6rem;">
-        <div style="font-weight:800;font-size:0.95rem;color:#2a2a2a;margin-bottom:0.35rem;">${escapeHtml(m.name || '?')}</div>
+        <div style="display:flex;align-items:center;margin-bottom:0.5rem;">
+          ${m.photoUrl ? `<img src="${escapeHtml(m.photoUrl)}" width="40" height="40" style="border-radius:50%;object-fit:cover;margin-right:0.7rem;display:block;" alt="${escapeHtml(m.name || '')}" />` : ''}
+          <div style="font-weight:800;font-size:0.95rem;color:#2a2a2a;">${escapeHtml(m.name || '?')}</div>
+        </div>
         ${m.email ? `<div style="font-size:0.8rem;color:#6b6b6b;">📧 <a href="mailto:${escapeHtml(m.email)}" style="color:#d4568e;text-decoration:none;">${escapeHtml(m.email)}</a></div>` : ''}
         ${m.phone ? `<div style="font-size:0.8rem;color:#6b6b6b;">📞 ${escapeHtml(m.phone)}</div>` : ''}
         ${m.whatsapp ? `<div style="font-size:0.8rem;color:#6b6b6b;"><span style="display:inline-block;width:14px;height:14px;background-color:#25D366;border-radius:3px;color:#ffffff;font-size:9px;font-weight:bold;line-height:14px;text-align:center;vertical-align:middle;margin-right:5px;">W</span> ${escapeHtml(m.whatsapp)}</div>` : ''}
